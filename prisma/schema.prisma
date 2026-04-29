@@ -45,6 +45,20 @@ enum PickupStatus {
   CANCELLED
 }
 
+enum Allergen {
+  GLUTEN
+  DAIRY
+  EGGS
+  FISH
+  SHELLFISH
+  TREE_NUTS
+  PEANUTS
+  WHEAT
+  SOY
+  SESAME
+}
+
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -54,6 +68,7 @@ model User {
   isVerified    Boolean   @default(false) @map("is_verified")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
+  refreshTokens RefreshToken[]
 
   restaurant    Restaurant?
   shelter       Shelter?
@@ -67,7 +82,7 @@ model User {
 model UserAllergy {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
-  allergen  String
+  allergen  Allergen
 
   user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -135,7 +150,7 @@ model Inventory {
   createdAt    DateTime       @default(now()) @map("created_at")
   expiresAt    DateTime       @map("expires_at")
   ingredients  Json
-  allergens    String[]
+  allergens    Allergen[]
 
   restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   order        Order?
@@ -209,4 +224,17 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([changedAt])
   @@map("audit_logs")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
 }
