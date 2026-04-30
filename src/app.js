@@ -12,6 +12,34 @@ const apiRoutes = require('./routes');
 
 const app = express();
 
+const { calculateState, calculatePrice, getTimeInfo } = require('./services/decayEngine');
+
+app.get('/api/test/decay/:id', async (req, res) => {
+  const item = await prisma.inventory.findUnique({
+    where: { id: req.params.id },
+  });
+  
+  const now = new Date();
+  const future = new Date(item.expiresAt);
+  future.setHours(future.getHours() - 2); // Simulate 2 hours before expiry
+  
+  const state = calculateState(item, future);
+  const price = calculatePrice(item, state);
+  const info = getTimeInfo(item, future);
+  
+  res.json({
+    item: {
+      name: item.name,
+      createdAt: item.createdAt,
+      expiresAt: item.expiresAt,
+    },
+    simulatedTime: future,
+    calculatedState: state,
+    calculatedPrice: price,
+    timeInfo: info,
+  });
+});
+
 // CORS — no wildcard in production
 app.use(cors({
   origin: env.NODE_ENV === 'production' ? process.env.ALLOWED_ORIGINS?.split(',') || [] : '*',
