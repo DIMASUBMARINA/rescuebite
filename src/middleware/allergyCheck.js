@@ -9,13 +9,11 @@ async function allergyCheck(req, res, next) {
       return res.status(400).json({ status: 'error', message: 'inventoryId required' });
     }
 
-    // Get user allergies
     const userAllergies = await prisma.userAllergy.findMany({
       where: { userId: req.userId },
     });
     const userAllergenList = userAllergies.map(a => a.allergen);
 
-    // Get item allergens
     const item = await prisma.inventory.findUnique({
       where: { id: inventoryId },
       select: { allergens: true, name: true, state: true },
@@ -29,7 +27,6 @@ async function allergyCheck(req, res, next) {
       return res.status(400).json({ status: 'error', message: 'Item not available for purchase' });
     }
 
-    // Check for conflicts
     const result = checkAllergies(userAllergenList, item.allergens);
 
     if (!result.safe) {

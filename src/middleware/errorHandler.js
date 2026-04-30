@@ -3,7 +3,6 @@ const { env } = require('../config/env');
 function errorHandler(err, req, res, next) {
   console.error(err);
 
-  // Zod validation errors
   if (err.name === 'ZodError') {
     return res.status(422).json({
       status: 'error',
@@ -13,7 +12,6 @@ function errorHandler(err, req, res, next) {
     });
   }
 
-  // Prisma unique constraint
   if (err.code === 'P2002') {
     return res.status(409).json({
       status: 'error',
@@ -23,7 +21,6 @@ function errorHandler(err, req, res, next) {
     });
   }
 
-  // Prisma foreign key / not found
   if (err.code === 'P2025') {
     return res.status(404).json({
       status: 'error',
@@ -32,7 +29,6 @@ function errorHandler(err, req, res, next) {
     });
   }
 
-  // Prisma record not found
   if (err.code === 'P2003') {
     return res.status(400).json({
       status: 'error',
@@ -41,7 +37,6 @@ function errorHandler(err, req, res, next) {
     });
   }
 
-  // Known business errors
   if (err.message) {
     const statusMap = {
       'Email already exists': 409,
@@ -75,7 +70,6 @@ function errorHandler(err, req, res, next) {
     }
   }
 
-  // Default 500
   res.status(500).json({
     status: 'error',
     code: 'INTERNAL_ERROR',
