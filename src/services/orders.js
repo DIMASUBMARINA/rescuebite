@@ -2,7 +2,6 @@ const { prisma } = require('../config/database');
 
 async function create(userId, inventoryId) {
   return prisma.$transaction(async (tx) => {
-    // Lock inventory row
     const item = await tx.inventory.findUnique({
       where: { id: inventoryId },
     });
@@ -11,13 +10,11 @@ async function create(userId, inventoryId) {
       throw new Error('Item not available');
     }
 
-    // Reserve inventory
     await tx.inventory.update({
       where: { id: inventoryId },
       data: { reservedQty: { increment: 1 } },
     });
 
-    // Create order with 10-minute reservation
     const reservedUntil = new Date(Date.now() + 10 * 60 * 1000);
 
     const order = await tx.order.create({
@@ -53,7 +50,6 @@ async function confirm(orderId, userId) {
       throw new Error('Reservation expired');
     }
 
-    // Finalize order
     await tx.inventory.update({
       where: { id: order.inventoryId },
       data: {

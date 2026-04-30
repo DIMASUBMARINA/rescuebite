@@ -5,10 +5,8 @@ const { calculateState, calculatePrice } = require('../services/decayEngine');
 function startDecayJob(intervalMinutes = 60) {
   console.log(`Starting decay job (every ${intervalMinutes} minutes)`);
   
-  // Run immediately on startup
   runDecayCycle();
   
-  // Schedule recurring runs
   cron.schedule(`*/${intervalMinutes} * * * *`, () => {
     console.log('Running scheduled decay cycle...');
     runDecayCycle();
@@ -34,7 +32,6 @@ async function runDecayCycle() {
         const newPrice = calculatePrice(item, newState);
         
         await prisma.$transaction(async (tx) => {
-          // Update inventory
           await tx.inventory.update({
             where: { id: item.id },
             data: {
@@ -43,7 +40,6 @@ async function runDecayCycle() {
             },
           });
           
-          // Log to audit
           await tx.auditLog.create({
             data: {
               entity: 'Inventory',
@@ -66,11 +62,9 @@ async function runDecayCycle() {
 }
 
 function startTimeoutJobs() {
-  // Check expired reservations every minute
   cron.schedule('* * * * *', async () => {
     const now = new Date();
     
-    // Release expired order reservations
     const expiredOrders = await prisma.order.findMany({
       where: {
         status: 'PENDING',
@@ -92,7 +86,6 @@ function startTimeoutJobs() {
       });
     }
     
-    // Check expired shelter claims
     const expiredClaims = await prisma.claim.findMany({
       where: {
         status: 'CLAIMED',
@@ -104,12 +97,17 @@ function startTimeoutJobs() {
       await prisma.$transaction(async (tx) => {
         await tx.inventory.update({
           where: { id: claim.inventoryId },
-          data: { state: 'FREE' },
+          data: { state: 'FREE', reservedQty: { decrement: 1 } },
         });
-        
+
         await tx.claim.update({
           where: { id: claim.id },
           data: { status: 'EXPIRED' },
+        });
+
+        await tx.pickup.updateMany({
+          where: { claimId: claim.id },
+          data: { status: 'CANCELLED' },
         });
       });
     }

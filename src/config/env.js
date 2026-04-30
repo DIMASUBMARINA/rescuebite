@@ -1,4 +1,4 @@
-require('dotenv').config(); // ADD THIS LINE AT THE VERY TOP
+require('dotenv').config(); 
 
 const { cleanEnv, str, port } = require('envalid');
 

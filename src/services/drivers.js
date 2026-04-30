@@ -1,8 +1,22 @@
 const { prisma } = require('../config/database');
 
+async function getDriverByUserId(userId) {
+  const driver = await prisma.driver.findUnique({ where: { userId } });
+  if (!driver) throw new Error('Driver profile not found');
+  return driver;
+}
+
 async function getAvailablePickups() {
+  const now = new Date();
+  
   return prisma.pickup.findMany({
-    where: { status: 'UNASSIGNED' },
+    where: {
+      status: 'UNASSIGNED',
+      claim: {
+        status: 'CLAIMED',
+        expiresAt: { gt: now },
+      },
+    },
     include: {
       claim: {
         include: {
@@ -22,7 +36,9 @@ async function getAvailablePickups() {
   });
 }
 
-async function claimPickup(pickupId, driverId) {
+async function claimPickup(pickupId, userId) {
+  const driver = await getDriverByUserId(userId);
+
   return prisma.$transaction(async (tx) => {
     const pickup = await tx.pickup.findUnique({
       where: { id: pickupId },
@@ -35,7 +51,7 @@ async function claimPickup(pickupId, driverId) {
     return tx.pickup.update({
       where: { id: pickupId },
       data: {
-        driverId,
+        driverId: driver.id,
         status: 'ASSIGNED',
         assignedAt: new Date(),
       },
@@ -43,12 +59,14 @@ async function claimPickup(pickupId, driverId) {
   });
 }
 
-async function markPickedUp(pickupId, driverId) {
+async function markPickedUp(pickupId, userId) {
+  const driver = await getDriverByUserId(userId);
+
   const pickup = await prisma.pickup.findUnique({
     where: { id: pickupId },
   });
 
-  if (!pickup || pickup.driverId !== driverId) {
+  if (!pickup || pickup.driverId !== driver.id) {
     throw new Error('Not authorized');
   }
 
@@ -65,12 +83,14 @@ async function markPickedUp(pickupId, driverId) {
   });
 }
 
-async function markDelivered(pickupId, driverId) {
+async function markDelivered(pickupId, userId) {
+  const driver = await getDriverByUserId(userId);
+
   const pickup = await prisma.pickup.findUnique({
     where: { id: pickupId },
   });
 
-  if (!pickup || pickup.driverId !== driverId) {
+  if (!pickup || pickup.driverId !== driver.id) {
     throw new Error('Not authorized');
   }
 
