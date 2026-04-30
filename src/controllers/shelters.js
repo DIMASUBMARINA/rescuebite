@@ -12,7 +12,6 @@ async function getAvailableDonations(req, res, next) {
 async function claimDonation(req, res, next) {
   try {
     const { inventoryId } = req.body;
-    // req.userId is from JWT (User ID), service will find Shelter ID
     const claim = await sheltersService.claimItem(req.userId, inventoryId);
     res.status(201).json({
       status: 'success',
