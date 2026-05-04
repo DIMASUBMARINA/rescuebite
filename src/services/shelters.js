@@ -46,16 +46,25 @@ async function claimItem(userId, inventoryId) {
       throw new Error('Shelter profile not found');
     }
 
-    const shelterId = shelter.id; 
-    const item = await tx.inventory.findUnique({
-      where: { id: inventoryId },
-    });
+    const shelterId = shelter.id;
 
-    if (!item || item.state !== 'FREE') {
+    const item = await tx.$queryRaw`
+      SELECT * FROM inventory
+      WHERE id = ${inventoryId}
+      FOR UPDATE
+    `;
+
+    if (!item || item.length === 0) {
       throw new Error('Item not available');
     }
 
-    if (item.quantity <= item.reservedQty) {
+    const inventoryItem = item[0];
+
+    if (inventoryItem.state !== 'FREE') {
+      throw new Error('Item not available');
+    }
+
+    if (inventoryItem.quantity <= inventoryItem.reserved_qty) {
       throw new Error('Item already claimed');
     }
 
@@ -75,7 +84,7 @@ async function claimItem(userId, inventoryId) {
     const claim = await tx.claim.create({
       data: {
         inventoryId,
-        shelterId, 
+        shelterId,
         status: 'CLAIMED',
         claimedAt: new Date(),
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),

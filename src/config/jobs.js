@@ -97,7 +97,10 @@ function startTimeoutJobs() {
       await prisma.$transaction(async (tx) => {
         await tx.inventory.update({
           where: { id: claim.inventoryId },
-          data: { state: 'FREE', reservedQty: { decrement: 1 } },
+          data: { 
+            state: 'FREE', 
+            reservedQty: { decrement: 1 } 
+          },
         });
 
         await tx.claim.update({
