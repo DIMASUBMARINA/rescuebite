@@ -1,4 +1,5 @@
 const { prisma } = require('../config/database');
+const { createPickupTask } = require('./pickups');
 
 async function findAvailableItems(userId, maxDistance = 10) {
   const shelter = await prisma.shelter.findUnique({
@@ -91,12 +92,7 @@ async function claimItem(userId, inventoryId) {
       },
     });
 
-    await tx.pickup.create({
-      data: {
-        claimId: claim.id,
-        status: 'UNASSIGNED',
-      },
-    });
+    await createPickupTask(claim.id);
 
     return claim;
   });

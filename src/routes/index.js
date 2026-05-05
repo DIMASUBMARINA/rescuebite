@@ -5,6 +5,7 @@ const inventoryRoutes = require('./inventory');
 const orderRoutes = require('./orders');
 const shelterRoutes = require('./shelters');
 const driverRoutes = require('./drivers');
+const adminRoutes = require('./admin');
 
 const router = express.Router();
 
@@ -14,5 +15,6 @@ router.use('/inventory', inventoryRoutes);
 router.use('/orders', orderRoutes);
 router.use('/shelters', shelterRoutes);
 router.use('/drivers', driverRoutes);
+router.use('/admin', adminRoutes);
 
 module.exports = router;
