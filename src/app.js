@@ -14,33 +14,6 @@ const app = express();
 
 const { calculateState, calculatePrice, getTimeInfo } = require('./services/decayEngine');
 
-app.get('/api/test/decay/:id', async (req, res) => {
-  const item = await prisma.inventory.findUnique({
-    where: { id: req.params.id },
-  });
-  
-  const now = new Date();
-  const future = new Date(item.expiresAt);
-  future.setHours(future.getHours() - 2); 
-  
-  const state = calculateState(item, future);
-  const price = calculatePrice(item, state);
-  const info = getTimeInfo(item, future);
-  
-  res.json({
-    item: {
-      name: item.name,
-      createdAt: item.createdAt,
-      expiresAt: item.expiresAt,
-    },
-    simulatedTime: future,
-    calculatedState: state,
-    calculatedPrice: price,
-    timeInfo: info,
-  });
-});
-
-
 app.use(cors({
   origin: env.NODE_ENV === 'production' ? process.env.ALLOWED_ORIGINS?.split(',') || [] : '*',
   credentials: true,
@@ -52,6 +25,7 @@ const swaggerDocument = YAML.load(path.join(__dirname, '../openapi.yaml'));
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.use('/api/v1', apiRoutes);
+console.log('Routes mounted:', apiRoutes.stack.map(r => r.route?.path).filter(Boolean));
 
 app.get('/health', async (req, res) => {
   try {
