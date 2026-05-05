@@ -2,18 +2,18 @@ const request = require('supertest');
 const { app } = require('../../src/app');
 const { prisma } = require('../../src/config/database');
 
+function uniqueEmail(prefix) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}@test.com`;
+}
+
 describe('Inventory Integration', () => {
   let token, userId;
 
   beforeEach(async () => {
-    await prisma.order.deleteMany();
-    await prisma.inventory.deleteMany();
-    await prisma.restaurant.deleteMany();
-    await prisma.user.deleteMany();
-
+    const email = uniqueEmail('rest');
     const res = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'rest@test.com', password: 'password123', role: 'RESTAURANT' });
+      .send({ email, password: 'password123', role: 'RESTAURANT' });
 
     token = res.body.data.accessToken;
     userId = res.body.data.user.id;
@@ -28,16 +28,6 @@ describe('Inventory Integration', () => {
         isVerified: true,
       },
     });
-  });
-
-  afterEach(async () => {
-    await prisma.inventory.deleteMany();
-    await prisma.restaurant.deleteMany();
-    await prisma.user.deleteMany();
-  });
-
-  afterAll(async () => {
-    await prisma.$disconnect();
   });
 
   test('restaurant can create item', async () => {
@@ -78,7 +68,7 @@ describe('Inventory Integration', () => {
   test('consumer cannot create inventory', async () => {
     const consumer = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'consumer@test.com', password: 'password123', role: 'CONSUMER' });
+      .send({ email: uniqueEmail('consumer'), password: 'password123', role: 'CONSUMER' });
 
     const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const res = await request(app)

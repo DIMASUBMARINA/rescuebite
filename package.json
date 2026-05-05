@@ -11,10 +11,6 @@
     "test:integration": "jest tests/integration --runInBand",
     "test:watch": "jest --watch"
   },
-  "jest": {
-    "testEnvironment": "node",
-    "setupFilesAfterEnv": ["./tests/setup.js"]
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",

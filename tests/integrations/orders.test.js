@@ -2,25 +2,22 @@ const request = require('supertest');
 const { app } = require('../../src/app');
 const { prisma } = require('../../src/config/database');
 
+function uniqueEmail(prefix) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}@test.com`;
+}
+
 describe('Orders Integration', () => {
   let restaurantToken, consumerToken, inventoryId;
 
   beforeEach(async () => {
-    await prisma.order.deleteMany();
-    await prisma.inventory.deleteMany();
-    await prisma.claim.deleteMany();
-    await prisma.pickup.deleteMany();
-    await prisma.restaurant.deleteMany();
-    await prisma.userAllergy.deleteMany();
-    await prisma.user.deleteMany();
-
+    const restEmail = uniqueEmail('rest');
     const restaurantReg = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'rest@test.com', password: 'password123', role: 'RESTAURANT' });
+      .send({ email: restEmail, password: 'password123', role: 'RESTAURANT' });
 
     restaurantToken = restaurantReg.body.data.accessToken;
 
-    const restaurantUser = await prisma.user.findUnique({ where: { email: 'rest@test.com' } });
+    const restaurantUser = await prisma.user.findUnique({ where: { email: restEmail } });
     await prisma.restaurant.create({
       data: {
         userId: restaurantUser.id,
@@ -32,9 +29,10 @@ describe('Orders Integration', () => {
       },
     });
 
+    const consumerEmail = uniqueEmail('consumer');
     const consumerReg = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'consumer@test.com', password: 'password123', role: 'CONSUMER' });
+      .send({ email: consumerEmail, password: 'password123', role: 'CONSUMER' });
 
     consumerToken = consumerReg.body.data.accessToken;
 
@@ -57,18 +55,6 @@ describe('Orders Integration', () => {
       where: { id: inventoryId },
       data: { state: 'DISCOUNTED' },
     });
-  });
-
-  afterEach(async () => {
-    await prisma.order.deleteMany();
-    await prisma.inventory.deleteMany();
-    await prisma.restaurant.deleteMany();
-    await prisma.userAllergy.deleteMany();
-    await prisma.user.deleteMany();
-  });
-
-  afterAll(async () => {
-    await prisma.$disconnect();
   });
 
   test('consumer can purchase discounted item', async () => {
@@ -111,19 +97,17 @@ describe('Orders Integration', () => {
     expect(res.body.data.status).toBe('CONFIRMED');
   });
 
-    test('overselling is impossible', async () => {
-    // Set quantity to exactly 1 to force conflict
+  test('overselling is impossible', async () => {
     await prisma.inventory.update({
       where: { id: inventoryId },
       data: { quantity: 1, reservedQty: 0 },
     });
 
-    // Create second consumer
+    const consumer2Email = uniqueEmail('consumer2');
     const consumer2Reg = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'consumer2@test.com', password: 'password123', role: 'CONSUMER' });
+      .send({ email: consumer2Email, password: 'password123', role: 'CONSUMER' });
 
-    // Try both simultaneously
     const [res1, res2] = await Promise.all([
       request(app)
         .post('/api/v1/orders')
@@ -135,10 +119,7 @@ describe('Orders Integration', () => {
         .send({ inventoryId }),
     ]);
 
-    const statuses = [res1.status, res2.status];
-    const successCount = statuses.filter(s => s === 201).length;
-    
-    // With quantity=1, only one should succeed
+    const successCount = [res1.status, res2.status].filter(s => s === 201).length;
     expect(successCount).toBe(1);
   });
 });
