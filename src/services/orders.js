@@ -2,11 +2,24 @@ const { prisma } = require('../config/database');
 
 async function create(userId, inventoryId) {
   return prisma.$transaction(async (tx) => {
-    const item = await tx.inventory.findUnique({
-      where: { id: inventoryId },
-    });
+    const rows = await tx.$queryRaw`
+      SELECT * FROM inventory
+      WHERE id = ${inventoryId}
+      FOR UPDATE
+    `;
 
-    if (!item || item.state !== 'DISCOUNTED' || item.quantity <= item.reservedQty) {
+    if (!rows || rows.length === 0) {
+      throw new Error('Item not available');
+    }
+
+    const item = rows[0];
+    const available = Number(item.quantity) - Number(item.reserved_qty);
+    
+    // Handle possible case variations from raw query
+    const itemState = String(item.state).toUpperCase();
+    const purchasableStates = ['FRESH', 'DISCOUNTED'];
+    
+    if (!purchasableStates.includes(itemState) || available <= 0) {
       throw new Error('Item not available');
     }
 
@@ -22,7 +35,7 @@ async function create(userId, inventoryId) {
         userId,
         inventoryId,
         status: 'PENDING',
-        totalPrice: item.currentPrice,
+        totalPrice: item.current_price,
         reservedUntil,
       },
     });
@@ -58,12 +71,12 @@ async function confirm(orderId, userId) {
       },
     });
 
-    await tx.order.update({
+    const updated = await tx.order.update({
       where: { id: orderId },
       data: { status: 'CONFIRMED' },
     });
 
-    return { ...order, status: 'CONFIRMED' };
+    return updated;
   });
 }
 

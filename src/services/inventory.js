@@ -84,7 +84,6 @@ async function update(id, userId, data) {
       name: data.name,
       description: data.description,
       originalPrice: data.originalPrice,
-      currentPrice: data.originalPrice,
       quantity: data.quantity,
       ingredients: data.ingredients,
       allergens: data.allergens,

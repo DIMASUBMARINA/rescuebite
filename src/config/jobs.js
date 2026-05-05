@@ -51,6 +51,18 @@ async function runDecayCycle() {
               changedBy: 'SYSTEM',
             },
           });
+
+          if (newState === 'EXPIRED') {
+            await tx.wasteLog.create({
+              data: {
+                restaurantId: item.restaurantId,
+                inventoryId: item.id,
+                quantity: item.quantity - item.reservedQty,
+                disposalMethod: 'COMPOST',
+                loggedAt: now,
+              },
+            });
+          }
         });
         
         console.log(`Item ${item.id}: ${item.state} → ${newState} (price: ${newPrice})`);
@@ -62,9 +74,11 @@ async function runDecayCycle() {
 }
 
 function startTimeoutJobs() {
+  // Every minute
   cron.schedule('* * * * *', async () => {
     const now = new Date();
     
+    // 1. Release expired order reservations (10 min)
     const expiredOrders = await prisma.order.findMany({
       where: {
         status: 'PENDING',
@@ -98,11 +112,11 @@ function startTimeoutJobs() {
         await tx.inventory.update({
           where: { id: claim.inventoryId },
           data: { 
-            state: 'FREE', 
+            state: 'FREE',
             reservedQty: { decrement: 1 } 
           },
         });
-
+        
         await tx.claim.update({
           where: { id: claim.id },
           data: { status: 'EXPIRED' },
@@ -111,6 +125,39 @@ function startTimeoutJobs() {
         await tx.pickup.updateMany({
           where: { claimId: claim.id },
           data: { status: 'CANCELLED' },
+        });
+      });
+    }
+
+    const expiredPickups = await prisma.pickup.findMany({
+      where: {
+        status: 'ASSIGNED',
+        assignedAt: { lt: new Date(now.getTime() - 15 * 60 * 1000) },
+      },
+      include: { claim: true },
+    });
+
+    for (const pickup of expiredPickups) {
+      await prisma.$transaction(async (tx) => {
+        if (pickup.claim) {
+          await tx.inventory.update({
+            where: { id: pickup.claim.inventoryId },
+            data: { reservedQty: { decrement: 1 } },
+          });
+
+          await tx.claim.update({
+            where: { id: pickup.claim.id },
+            data: { status: 'EXPIRED' },
+          });
+        }
+
+        await tx.pickup.update({
+          where: { id: pickup.id },
+          data: {
+            status: 'UNASSIGNED',
+            driverId: null,
+            assignedAt: null,
+          },
         });
       });
     }

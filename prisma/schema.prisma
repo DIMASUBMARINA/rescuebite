@@ -238,3 +238,14 @@ model RefreshToken {
 
   @@map("refresh_tokens")
 }
+
+model WasteLog {
+  id             String   @id @default(uuid())
+  restaurantId   String   @map("restaurant_id")
+  inventoryId    String   @map("inventory_id")
+  quantity       Int
+  disposalMethod String   @map("disposal_method")
+  loggedAt       DateTime @default(now()) @map("logged_at")
+
+  @@map("waste_logs")
+}

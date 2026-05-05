@@ -23,8 +23,12 @@ async function allergyCheck(req, res, next) {
       return res.status(404).json({ status: 'error', message: 'Item not found' });
     }
 
-    if (item.state !== 'DISCOUNTED') {
-      return res.status(400).json({ status: 'error', message: 'Item not available for purchase' });
+    const purchasableStates = ['FRESH', 'DISCOUNTED'];
+    if (!purchasableStates.includes(item.state)) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Item not available for purchase' 
+      });
     }
 
     const result = checkAllergies(userAllergenList, item.allergens);
