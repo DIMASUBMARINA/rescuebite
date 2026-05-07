@@ -39,7 +39,7 @@ app.get('/api/test/decay/:id', async (req, res) => {
     timeInfo: info,
   });
 });
-
+//asdasd
 
 app.use(cors({
   origin: env.NODE_ENV === 'production' ? process.env.ALLOWED_ORIGINS?.split(',') || [] : '*',
