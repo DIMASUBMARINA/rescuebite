@@ -4,11 +4,15 @@ function errorHandler(err, req, res, next) {
   console.error(err);
 
   if (err.name === 'ZodError') {
+    const issues = err.issues || err.errors || [];
     return res.status(422).json({
       status: 'error',
       code: 'VALIDATION_ERROR',
       message: 'Invalid request data',
-      errors: err.errors.map(e => ({ path: e.path, message: e.message })),
+      errors: issues.map(e => ({ 
+        path: e.path || [], 
+        message: e.message 
+      })),
     });
   }
 
@@ -58,6 +62,9 @@ function errorHandler(err, req, res, next) {
       'Not authorized': 403,
       'Invalid status': 422,
       'SAFETY BLOCK': 400,
+      'Restaurant profile already exists': 409,
+      'Shelter profile already exists': 409,
+      'Driver profile already exists': 409,
     };
 
     for (const [msg, status] of Object.entries(statusMap)) {

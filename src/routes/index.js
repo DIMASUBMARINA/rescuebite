@@ -1,4 +1,5 @@
 const express = require('express');
+
 const authRoutes = require('./auth');
 const userRoutes = require('./users');
 const inventoryRoutes = require('./inventory');
@@ -6,6 +7,7 @@ const orderRoutes = require('./orders');
 const shelterRoutes = require('./shelters');
 const driverRoutes = require('./drivers');
 const adminRoutes = require('./admin');
+const profileRoutes = require('./profile');
 
 const router = express.Router();
 
@@ -16,5 +18,6 @@ router.use('/orders', orderRoutes);
 router.use('/shelters', shelterRoutes);
 router.use('/drivers', driverRoutes);
 router.use('/admin', adminRoutes);
+router.use('/profile', profileRoutes);
 
 module.exports = router;
