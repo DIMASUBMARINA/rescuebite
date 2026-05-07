@@ -4,3 +4,5 @@ const { env } = require('./env');
 const prisma = new PrismaClient();
 
 module.exports = { prisma };
+
+///asdasdasdasdasds
