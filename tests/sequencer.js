@@ -2,7 +2,6 @@ const Sequencer = require('@jest/test-sequencer').default;
 
 class CustomSequencer extends Sequencer {
   sort(tests) {
-    // Run unit tests first, then integration tests sequentially
     const copyTests = Array.from(tests);
     return copyTests.sort((testA, testB) => {
       const isUnitA = testA.path.includes('unit');

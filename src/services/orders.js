@@ -15,7 +15,6 @@ async function create(userId, inventoryId) {
     const item = rows[0];
     const available = Number(item.quantity) - Number(item.reserved_qty);
     
-    // Handle possible case variations from raw query
     const itemState = String(item.state).toUpperCase();
     const purchasableStates = ['FRESH', 'DISCOUNTED'];
     

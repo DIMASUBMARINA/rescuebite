@@ -1,12 +1,10 @@
 const path = require('path');
 
-// Force load .env.test BEFORE anything else
 require('dotenv').config({ path: path.join(__dirname, '../.env.test') });
 
 const { prisma } = require('../src/config/database');
 
 beforeAll(async () => {
-  // Safety check: ensure we're on test DB
   const result = await prisma.$queryRaw`SELECT current_database()`;
   const dbName = result[0].current_database;
   
@@ -16,7 +14,6 @@ beforeAll(async () => {
   
   console.log('Test database:', dbName);
 
-  // Clean all tables
   await prisma.$executeRaw`TRUNCATE TABLE 
     "orders", 
     "inventory", 

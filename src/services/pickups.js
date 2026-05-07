@@ -33,7 +33,7 @@ async function timeoutExpired(pickupId) {
     return false;
   }
 
-  const timeoutMs = 15 * 60 * 1000; // 15 minutes
+  const timeoutMs = 15 * 60 * 1000;
   return Date.now() - new Date(pickup.assignedAt).getTime() > timeoutMs;
 }
 

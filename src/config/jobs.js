@@ -74,11 +74,9 @@ async function runDecayCycle() {
 }
 
 function startTimeoutJobs() {
-  // Every minute
   cron.schedule('* * * * *', async () => {
     const now = new Date();
     
-    // 1. Release expired order reservations (10 min)
     const expiredOrders = await prisma.order.findMany({
       where: {
         status: 'PENDING',
