@@ -2,23 +2,18 @@ const { prisma } = require('../config/database');
 
 async function create(userId, inventoryId) {
   return prisma.$transaction(async (tx) => {
-    const rows = await tx.$queryRaw`
-      SELECT * FROM inventory
-      WHERE id = ${inventoryId}
-      FOR UPDATE
-    `;
+    const item = await tx.inventory.findUnique({
+      where: { id: inventoryId },
+    });
 
-    if (!rows || rows.length === 0) {
+    if (!item) {
       throw new Error('Item not available');
     }
 
-    const item = rows[0];
-    const available = Number(item.quantity) - Number(item.reserved_qty);
-    
-    const itemState = String(item.state).toUpperCase();
+    const available = Number(item.quantity) - Number(item.reservedQty);
     const purchasableStates = ['FRESH', 'DISCOUNTED'];
     
-    if (!purchasableStates.includes(itemState) || available <= 0) {
+    if (!purchasableStates.includes(item.state) || available <= 0) {
       throw new Error('Item not available');
     }
 
@@ -34,12 +29,14 @@ async function create(userId, inventoryId) {
         userId,
         inventoryId,
         status: 'PENDING',
-        totalPrice: item.current_price,
+        totalPrice: item.currentPrice,
         reservedUntil,
       },
     });
 
     return order;
+  }, {
+    isolationLevel: 'Serializable',
   });
 }
 
