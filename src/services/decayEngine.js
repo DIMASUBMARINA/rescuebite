@@ -15,7 +15,7 @@ function calculateState(item, now = new Date()) {
 
 function calculatePrice(item, state) {
   const multiplier = STATES[state]?.multiplier ?? 0;
-  return Math.floor(item.originalPrice * multiplier);
+  return Math.floor(Number(item.originalPrice) * multiplier);
 }
 
 function getTimeInfo(item, now = new Date()) {

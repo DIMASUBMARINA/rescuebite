@@ -1,5 +1,4 @@
 const { prisma } = require('../config/database');
-const { log: auditLog } = require('./auditLogger');
 
 async function overrideInventoryState(inventoryId, newState, reason, adminId, ipAddress) {
   const item = await prisma.inventory.findUnique({
@@ -18,15 +17,17 @@ async function overrideInventoryState(inventoryId, newState, reason, adminId, ip
       data: { state: newState },
     });
 
-    await auditLog({
-      entity: 'Inventory',
-      entityId: inventoryId,
-      action: 'ADMIN_OVERRIDE',
-      field: 'state',
-      oldValue: oldState,
-      newValue: newState,
-      changedBy: adminId,
-      ipAddress,
+    await tx.auditLog.create({
+      data: {
+        entity: 'Inventory',
+        entityId: inventoryId,
+        action: 'ADMIN_OVERRIDE',
+        field: 'state',
+        oldValue: oldState,
+        newValue: newState,
+        changedBy: adminId,
+        ipAddress,
+      },
     });
 
     await tx.auditLog.create({

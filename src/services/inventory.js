@@ -31,13 +31,9 @@ async function list({ state, page, perPage }) {
 }
 
 async function create(userId, data) {
-  console.log("DEBUG: Looking for restaurant with userId:", userId);
-  
   const restaurant = await prisma.restaurant.findUnique({
     where: { userId },
   });
-  
-  console.log("DEBUG: Found restaurant:", restaurant);
 
   if (!restaurant) {
     throw new Error('Restaurant profile not found');
