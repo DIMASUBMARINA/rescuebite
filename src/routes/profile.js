@@ -4,7 +4,6 @@ const { requireRole } = require('../middleware/rbac');
 const { validate } = require('../middleware/validation');
 const { z } = require('zod');
 
-// Validation schemas
 const restaurantSchema = z.object({
   businessName: z.string().min(1),
   address: z.string().min(1),
@@ -25,7 +24,6 @@ const driverSchema = z.object({
   vehiclePlate: z.string().min(1),
 });
 
-// Controllers inline (simple, no separate files needed)
 const { prisma } = require('../config/database');
 
 router.post(

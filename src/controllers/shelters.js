@@ -23,4 +23,13 @@ async function claimDonation(req, res, next) {
   }
 }
 
-module.exports = { getAvailableDonations, claimDonation };
+async function confirmReceipt(req, res, next) {
+  try {
+    const pickup = await sheltersService.confirmReceipt(req.userId, req.params.id);
+    res.json({ status: 'success', data: pickup });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { getAvailableDonations, claimDonation, confirmReceipt };

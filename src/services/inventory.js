@@ -105,5 +105,37 @@ async function remove(id, userId) {
   await prisma.inventory.delete({ where: { id } });
 }
 
+async function listByRestaurant(userId, { page = 1, perPage = 20 }) {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { userId },
+  });
 
-module.exports = { list, create, update, remove };
+  if (!restaurant) {
+    throw new Error('Restaurant profile not found');
+  }
+
+  const [items, total] = await Promise.all([
+    prisma.inventory.findMany({
+      where: { restaurantId: restaurant.id },
+      skip: (page - 1) * perPage,
+      take: perPage,
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.inventory.count({
+      where: { restaurantId: restaurant.id },
+    }),
+  ]);
+
+  return {
+    items,
+    meta: {
+      total,
+      page,
+      perPage,
+      totalPages: Math.ceil(total / perPage),
+    },
+  };
+}
+
+
+module.exports = { list, create, update, remove, listByRestaurant };

@@ -132,31 +132,16 @@ function startTimeoutJobs() {
         status: 'ASSIGNED',
         assignedAt: { lt: new Date(now.getTime() - 15 * 60 * 1000) },
       },
-      include: { claim: true },
     });
 
     for (const pickup of expiredPickups) {
-      await prisma.$transaction(async (tx) => {
-        if (pickup.claim) {
-          await tx.inventory.update({
-            where: { id: pickup.claim.inventoryId },
-            data: { reservedQty: { decrement: 1 } },
-          });
-
-          await tx.claim.update({
-            where: { id: pickup.claim.id },
-            data: { status: 'EXPIRED' },
-          });
-        }
-
-        await tx.pickup.update({
-          where: { id: pickup.id },
-          data: {
-            status: 'UNASSIGNED',
-            driverId: null,
-            assignedAt: null,
-          },
-        });
+      await prisma.pickup.update({
+        where: { id: pickup.id },
+        data: {
+          status: 'UNASSIGNED',
+          driverId: null,
+          assignedAt: null,
+        },
       });
     }
   });

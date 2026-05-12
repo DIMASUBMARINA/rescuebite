@@ -7,5 +7,5 @@ router.get('/', verifyToken, inventoryController.list);
 router.post('/', verifyToken, requireRole('RESTAURANT'), inventoryController.create);
 router.patch('/:id', verifyToken, requireRole('RESTAURANT'), inventoryController.update);
 router.delete('/:id', verifyToken, requireRole('RESTAURANT'), inventoryController.remove);
-
+router.get('/my-dishes', verifyToken, requireRole('RESTAURANT'), inventoryController.getMyDishes);
 module.exports = router;

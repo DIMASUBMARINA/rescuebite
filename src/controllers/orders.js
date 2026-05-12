@@ -23,4 +23,13 @@ async function confirm(req, res, next) {
   }
 }
 
-module.exports = { create, confirm };
+async function cancel(req, res, next) {
+  try {
+    const order = await ordersService.cancel(req.params.id, req.userId);
+    res.json({ status: 'success', data: order });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { create, confirm, cancel };

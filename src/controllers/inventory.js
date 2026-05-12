@@ -37,4 +37,16 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { list, create, update, remove };
+async function getMyDishes(req, res, next) {
+  try {
+    const { page = 1, perPage = 20 } = req.query;
+    const result = await inventoryService.listByRestaurant(req.userId, {
+      page: Number(page),
+      perPage: Number(perPage),
+    });
+    res.json({ status: 'success', data: result.items, meta: result.meta });
+  } catch (err) {
+    next(err);
+  }
+}
+module.exports = { list, create, update, remove, getMyDishes };

@@ -5,5 +5,6 @@ const sheltersController = require('../controllers/shelters');
 
 router.get('/available-donations', verifyToken, requireRole('SHELTER'), sheltersController.getAvailableDonations);
 router.post('/claims', verifyToken, requireRole('SHELTER'), sheltersController.claimDonation);
+router.post('/claims/:id/confirm-receipt', verifyToken, requireRole('SHELTER'), sheltersController.confirmReceipt);
 
 module.exports = router;

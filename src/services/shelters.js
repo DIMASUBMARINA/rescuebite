@@ -13,7 +13,6 @@ async function findAvailableItems(userId, maxDistance = 10) {
   const items = await prisma.inventory.findMany({
     where: {
       state: 'FREE',
-      quantity: { gt: prisma.inventory.fields.reservedQty },
     },
     include: {
       restaurant: {
@@ -28,6 +27,7 @@ async function findAvailableItems(userId, maxDistance = 10) {
   });
 
   const itemsWithDistance = items
+    .filter(item => item.quantity > item.reservedQty)
     .map(item => {
       const distance = calculateDistance(
         Number(shelter.lat),
@@ -107,4 +107,56 @@ async function claimItem(userId, inventoryId) {
   });
 }
 
-module.exports = { findAvailableItems, claimItem };
+async function confirmReceipt(userId, claimId) {
+  const shelter = await prisma.shelter.findUnique({
+    where: { userId },
+  });
+
+  if (!shelter) {
+    throw new Error('Shelter profile not found');
+  }
+
+  const claim = await prisma.claim.findUnique({
+    where: { id: claimId },
+    include: { pickup: true },
+  });
+
+  if (!claim) {
+    throw new Error('Claim not found');
+  }
+
+  if (claim.shelterId !== shelter.id) {
+    throw new Error('Not authorized');
+  }
+
+  if (!claim.pickup) {
+    throw new Error('No pickup associated with this claim');
+  }
+
+  if (claim.pickup.status !== 'DELIVERED') {
+    throw new Error('Delivery not yet marked as delivered by driver');
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const pickup = await tx.pickup.update({
+      where: { id: claim.pickup.id },
+      data: { status: 'COMPLETED' },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        entity: 'Pickup',
+        entityId: pickup.id,
+        action: 'RECEIPT_CONFIRMED',
+        field: 'status',
+        oldValue: 'DELIVERED',
+        newValue: 'COMPLETED',
+        changedBy: userId,
+      },
+    });
+
+    return pickup;
+  });
+}
+
+module.exports = { findAvailableItems, claimItem, confirmReceipt };

@@ -76,4 +76,33 @@ async function confirm(orderId, userId) {
   });
 }
 
-module.exports = { create, confirm };
+async function cancel(orderId, userId) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { inventory: true },
+    });
+
+    if (!order || order.userId !== userId) {
+      throw new Error('Order not found');
+    }
+
+    if (order.status !== 'PENDING') {
+      throw new Error('Can only cancel pending orders');
+    }
+
+    await tx.inventory.update({
+      where: { id: order.inventoryId },
+      data: { reservedQty: { decrement: 1 } },
+    });
+
+    const updated = await tx.order.update({
+      where: { id: orderId },
+      data: { status: 'CANCELLED' },
+    });
+
+    return updated;
+  });
+}
+
+module.exports = { create, confirm, cancel };

@@ -6,5 +6,6 @@ const ordersController = require('../controllers/orders');
 
 router.post('/', verifyToken, requireRole('CONSUMER'), allergyCheck, ordersController.create);
 router.post('/:id/confirm', verifyToken, requireRole('CONSUMER'), ordersController.confirm);
+router.post('/:id/cancel', verifyToken, requireRole('CONSUMER'), ordersController.cancel);
 
 module.exports = router;
