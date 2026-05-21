@@ -8,6 +8,7 @@ import RestaurantDashboard from './pages/RestaurantDashboard';
 import ShelterDashboard from './pages/ShelterDashboard';
 import DriverDashboard from './pages/DriverDashboard';
 import CreateProfile from './pages/CreateProfile';
+import AdminDashboard from './pages/AdminDashboard'
 
 function App() {
   const { user } = useAuth();
@@ -20,6 +21,10 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/create-profile" element={<CreateProfile />} />
+          <Route 
+            path="/admin" 
+            element={user?.role === 'ADMIN' ? <AdminDashboard /> : <Navigate to="/login" />} 
+            />
           <Route 
             path="/consumer" 
             element={user?.role === 'CONSUMER' ? <ConsumerDashboard /> : <Navigate to="/login" />} 

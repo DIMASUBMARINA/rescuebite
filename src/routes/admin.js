@@ -17,5 +17,10 @@ router.post(
   validate(overrideSchema),
   adminController.overrideState
 );
+router.get('/users', verifyToken, requireRole('ADMIN'), adminController.listUsers);
+router.post('/users/:id/suspend', verifyToken, requireRole('ADMIN'), adminController.suspendUser);
+router.post('/users/:id/unsuspend', verifyToken, requireRole('ADMIN'), adminController.unsuspendUser);
+
+module.exports = router;
 
 module.exports = router;

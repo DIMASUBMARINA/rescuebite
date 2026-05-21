@@ -52,7 +52,6 @@ async function register(email, password, role, phone) {
     data: { email, passwordHash, role, phone },
   });
 
-  // Send verification email (non-blocking — don't fail registration if email fails)
   const verificationToken = await createVerificationToken(user.id);
   sendVerificationEmail(email, verificationToken).catch((err) => {
     console.error('Failed to send verification email:', err);
@@ -79,7 +78,6 @@ async function verifyEmail(token) {
   if (record.usedAt) throw new Error('Verification token has already been used');
   if (record.expiresAt < new Date()) throw new Error('Verification token has expired');
 
-  // Mark token as used and verify user in a transaction
   const [, user] = await prisma.$transaction([
     prisma.emailVerificationToken.update({
       where: { id: record.id },
@@ -99,7 +97,6 @@ async function resendVerificationEmail(userId) {
   if (!user) throw new Error('User not found');
   if (user.isVerified) throw new Error('Email is already verified');
 
-  // Invalidate any unexpired tokens by marking them used
   await prisma.emailVerificationToken.updateMany({
     where: { userId, usedAt: null, expiresAt: { gt: new Date() } },
     data: { usedAt: new Date() },
@@ -114,6 +111,10 @@ async function resendVerificationEmail(userId) {
 async function login(email, password) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new Error('Invalid credentials');
+
+  if (user.isSuspended) {
+    throw new Error('Your account has been suspended. Contact admin.');
+  }
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) throw new Error('Invalid credentials');
