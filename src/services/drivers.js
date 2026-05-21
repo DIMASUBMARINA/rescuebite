@@ -1,4 +1,5 @@
 const { prisma } = require('../config/database');
+const { log } = require('./auditLogger');
 
 async function getDriverByUserId(userId) {
   const driver = await prisma.driver.findUnique({ where: { userId } });
@@ -8,7 +9,7 @@ async function getDriverByUserId(userId) {
 
 async function getAvailablePickups() {
   const now = new Date();
-  
+
   return prisma.pickup.findMany({
     where: {
       status: 'UNASSIGNED',
@@ -48,7 +49,7 @@ async function claimPickup(pickupId, userId) {
       throw new Error('Pickup not available');
     }
 
-    return tx.pickup.update({
+    const updated = await tx.pickup.update({
       where: { id: pickupId },
       data: {
         driverId: driver.id,
@@ -56,6 +57,20 @@ async function claimPickup(pickupId, userId) {
         assignedAt: new Date(),
       },
     });
+
+    await tx.auditLog.create({
+      data: {
+        entity: 'Pickup',
+        entityId: pickupId,
+        action: 'STATUS_CHANGE',
+        field: 'status',
+        oldValue: 'UNASSIGNED',
+        newValue: 'ASSIGNED',
+        changedBy: userId,
+      },
+    });
+
+    return updated;
   });
 }
 
@@ -74,12 +89,28 @@ async function markPickedUp(pickupId, userId) {
     throw new Error('Invalid status');
   }
 
-  return prisma.pickup.update({
-    where: { id: pickupId },
-    data: {
-      status: 'IN_TRANSIT',
-      pickedUpAt: new Date(),
-    },
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.pickup.update({
+      where: { id: pickupId },
+      data: {
+        status: 'IN_TRANSIT',
+        pickedUpAt: new Date(),
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        entity: 'Pickup',
+        entityId: pickupId,
+        action: 'STATUS_CHANGE',
+        field: 'status',
+        oldValue: 'ASSIGNED',
+        newValue: 'IN_TRANSIT',
+        changedBy: userId,
+      },
+    });
+
+    return updated;
   });
 }
 
@@ -98,12 +129,28 @@ async function markDelivered(pickupId, userId) {
     throw new Error('Invalid status');
   }
 
-  return prisma.pickup.update({
-    where: { id: pickupId },
-    data: {
-      status: 'DELIVERED',
-      deliveredAt: new Date(),
-    },
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.pickup.update({
+      where: { id: pickupId },
+      data: {
+        status: 'DELIVERED',
+        deliveredAt: new Date(),
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        entity: 'Pickup',
+        entityId: pickupId,
+        action: 'STATUS_CHANGE',
+        field: 'status',
+        oldValue: 'IN_TRANSIT',
+        newValue: 'DELIVERED',
+        changedBy: userId,
+      },
+    });
+
+    return updated;
   });
 }
 

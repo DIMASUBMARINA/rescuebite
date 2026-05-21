@@ -153,7 +153,7 @@ model Inventory {
   allergens    Allergen[]
 
   restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  order        Order?
+  orders       Order[]
   claim        Claim?
 
   @@index([restaurantId])
@@ -165,7 +165,7 @@ model Inventory {
 model Order {
   id             String      @id @default(uuid())
   userId         String      @map("user_id")
-  inventoryId    String      @unique @map("inventory_id")
+  inventoryId    String      @map("inventory_id")
   status         OrderStatus @default(PENDING)
   totalPrice     Decimal     @db.Decimal(10, 2) @map("total_price")
   reservedUntil  DateTime?   @map("reserved_until")

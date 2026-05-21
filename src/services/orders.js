@@ -12,7 +12,7 @@ async function create(userId, inventoryId) {
 
     const available = Number(item.quantity) - Number(item.reservedQty);
     const purchasableStates = ['FRESH', 'DISCOUNTED'];
-    
+
     if (!purchasableStates.includes(item.state) || available <= 0) {
       throw new Error('Item not available');
     }
@@ -31,6 +31,18 @@ async function create(userId, inventoryId) {
         status: 'PENDING',
         totalPrice: item.currentPrice,
         reservedUntil,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        entity: 'Order',
+        entityId: order.id,
+        action: 'STATUS_CHANGE',
+        field: 'status',
+        oldValue: null,
+        newValue: 'PENDING',
+        changedBy: userId,
       },
     });
 
@@ -72,37 +84,20 @@ async function confirm(orderId, userId) {
       data: { status: 'CONFIRMED' },
     });
 
-    return updated;
-  });
-}
-
-async function cancel(orderId, userId) {
-  return prisma.$transaction(async (tx) => {
-    const order = await tx.order.findUnique({
-      where: { id: orderId },
-      include: { inventory: true },
-    });
-
-    if (!order || order.userId !== userId) {
-      throw new Error('Order not found');
-    }
-
-    if (order.status !== 'PENDING') {
-      throw new Error('Can only cancel pending orders');
-    }
-
-    await tx.inventory.update({
-      where: { id: order.inventoryId },
-      data: { reservedQty: { decrement: 1 } },
-    });
-
-    const updated = await tx.order.update({
-      where: { id: orderId },
-      data: { status: 'CANCELLED' },
+    await tx.auditLog.create({
+      data: {
+        entity: 'Order',
+        entityId: orderId,
+        action: 'STATUS_CHANGE',
+        field: 'status',
+        oldValue: 'PENDING',
+        newValue: 'CONFIRMED',
+        changedBy: userId,
+      },
     });
 
     return updated;
   });
 }
 
-module.exports = { create, confirm, cancel };
+module.exports = { create, confirm };
