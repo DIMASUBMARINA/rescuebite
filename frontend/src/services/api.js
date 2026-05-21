@@ -9,7 +9,6 @@ const api = axios.create({
   },
 });
 
-// Add token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
   if (token) {
@@ -45,6 +44,11 @@ export const orderAPI = {
   confirm: (id) => api.post(`/orders/${id}/confirm`),
   cancel: (id) => api.post(`/orders/${id}/cancel`),
   pay: (id) => api.post(`/orders/${id}/pay`),
+  confirmByRestaurant: (id) => api.post(`/orders/${id}/confirm`),
+  markReady: (id) => api.post(`/orders/${id}/ready`),
+  markPickedUpByConsumer: (id) => api.post(`/orders/${id}/picked-up`),
+  listByRestaurant: () => api.get('/orders/my-restaurant-orders'),
+  listByConsumer: () => api.get('/orders/my-orders'),
 };
 
 export const shelterAPI = {
@@ -58,3 +62,4 @@ export const driverAPI = {
   markPickedUp: (id) => api.post(`/drivers/pickups/${id}/mark-picked-up`),
   markDelivered: (id) => api.post(`/drivers/pickups/${id}/mark-delivered`),
 };
+

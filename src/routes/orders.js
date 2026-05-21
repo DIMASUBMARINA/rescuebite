@@ -14,8 +14,13 @@ router.post(
   validate(createOrderSchema),
   ordersController.create
 );
-router.post('/:id/confirm', verifyToken, requireRole('CONSUMER'), ordersController.confirm);
-router.post('/:id/cancel', verifyToken, requireRole('CONSUMER'), ordersController.cancel);
 router.post('/:id/pay', verifyToken, requireRole('CONSUMER'), ordersController.pay);
+router.post('/:id/cancel', verifyToken, requireRole('CONSUMER'), ordersController.cancel);
+router.post('/:id/picked-up', verifyToken, requireRole('CONSUMER'), ordersController.markPickedUpByConsumer);
+router.get('/my-orders', verifyToken, requireRole('CONSUMER'), ordersController.listByConsumer);  
+
+router.get('/my-restaurant-orders', verifyToken, requireRole('RESTAURANT'), ordersController.listByRestaurant);
+router.post('/:id/confirm', verifyToken, requireRole('RESTAURANT'), ordersController.confirmByRestaurant);
+router.post('/:id/ready', verifyToken, requireRole('RESTAURANT'), ordersController.markReady);
 
 module.exports = router;

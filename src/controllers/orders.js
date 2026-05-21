@@ -86,4 +86,50 @@ async function pay(req, res, next) {
   }
 }
 
-module.exports = { create, confirm, cancel, pay };
+async function confirmByRestaurant(req, res, next) {
+  try {
+    const order = await ordersService.confirmByRestaurant(req.params.id, req.userId);
+    res.json({ status: 'success', data: order });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function markReady(req, res, next) {
+  try {
+    const order = await ordersService.markReady(req.params.id, req.userId);
+    res.json({ status: 'success', data: order });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function markPickedUpByConsumer(req, res, next) {
+  try {
+    const order = await ordersService.markPickedUpByConsumer(req.params.id, req.userId);
+    res.json({ status: 'success', data: order });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listByRestaurant(req, res, next) {
+  try {
+    const orders = await ordersService.listByRestaurant(req.userId);
+    res.json({ status: 'success', data: orders });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function listByConsumer(req, res, next) {
+  try {
+    const orders = await ordersService.listByConsumer(req.userId);
+    res.json({ status: 'success', data: orders });
+  } catch (err) {
+    next(err);
+  }
+}
+
+
+module.exports = { create, confirm, cancel, pay, confirmByRestaurant, markReady, markPickedUpByConsumer, listByRestaurant, listByConsumer };

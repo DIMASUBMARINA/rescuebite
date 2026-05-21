@@ -123,7 +123,6 @@ async function pay(orderId, userId) {
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: orderId },
-      include: { inventory: { include: { restaurant: true } } },
     });
 
     if (!order || order.userId !== userId) {
@@ -157,6 +156,93 @@ async function pay(orderId, userId) {
   });
 }
 
+async function confirmByRestaurant(orderId, userId) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { inventory: true },
+    });
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    const restaurant = await tx.restaurant.findUnique({
+      where: { userId },
+    });
+
+    if (!restaurant || order.inventory.restaurantId !== restaurant.id) {
+      throw new Error('Not authorized');
+    }
+
+    if (order.status !== 'PAID') {
+      throw new Error('Order not paid');
+    }
+
+    await tx.inventory.update({
+      where: { id: order.inventoryId },
+      data: {
+        quantity: { decrement: 1 },
+        reservedQty: { decrement: 1 },
+      },
+    });
+
+    const updated = await tx.order.update({
+      where: { id: orderId },
+      data: { status: 'CONFIRMED' },
+    });
+
+    return updated;
+  });
+}
+
+async function markReady(orderId, userId) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { inventory: true },
+  });
+
+  if (!order) {
+    throw new Error('Order not found');
+  }
+
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { userId },
+  });
+
+  if (!restaurant || order.inventory.restaurantId !== restaurant.id) {
+    throw new Error('Not authorized');
+  }
+
+  if (order.status !== 'CONFIRMED') {
+    throw new Error('Order not confirmed');
+  }
+
+  return prisma.order.update({
+    where: { id: orderId },
+    data: { status: 'READY_FOR_PICKUP' },
+  });
+}
+
+async function markPickedUpByConsumer(orderId, userId) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+  });
+
+  if (!order || order.userId !== userId) {
+    throw new Error('Order not found');
+  }
+
+  if (order.status !== 'READY_FOR_PICKUP') {
+    throw new Error('Order not ready for pickup');
+  }
+
+  return prisma.order.update({
+    where: { id: orderId },
+    data: { status: 'COMPLETED' },
+  });
+}
+
 async function cancel(orderId, userId) {
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
@@ -186,4 +272,45 @@ async function cancel(orderId, userId) {
   });
 }
 
-module.exports = { create, confirm, cancel, pay };
+async function listByRestaurant(userId) {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { userId },
+  });
+
+  if (!restaurant) {
+    throw new Error('Restaurant profile not found');
+  }
+
+  return prisma.order.findMany({
+    where: {
+      inventory: {
+        restaurantId: restaurant.id,
+      },
+    },
+    include: {
+      user: {
+        select: { email: true, phone: true },
+      },
+      inventory: {
+        select: { name: true, originalPrice: true, currentPrice: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+async function listByConsumer(userId) {
+  return prisma.order.findMany({
+    where: { userId },
+    include: {
+      inventory: {
+        select: { name: true, originalPrice: true, currentPrice: true, state: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+
+
+module.exports = { create, confirm, cancel, pay, confirmByRestaurant, markReady, markPickedUpByConsumer, listByRestaurant, listByConsumer };
