@@ -24,8 +24,11 @@ enum InventoryState {
 
 enum OrderStatus {
   PENDING
+  PAID
   CONFIRMED
   READY_FOR_PICKUP
+  IN_TRANSIT
+  DELIVERED
   COMPLETED
   CANCELLED
 }
@@ -165,15 +168,23 @@ model Inventory {
 model Order {
   id             String      @id @default(uuid())
   userId         String      @map("user_id")
-  inventoryId    String      @map("inventory_id")
+  inventoryId    String      @unique @map("inventory_id")
   status         OrderStatus @default(PENDING)
   totalPrice     Decimal     @db.Decimal(10, 2) @map("total_price")
   reservedUntil  DateTime?   @map("reserved_until")
+  
+  deliveryAddress String?    @map("delivery_address")
+  deliveryLat     Decimal?   @db.Decimal(10, 8) @map("delivery_lat")
+  deliveryLon     Decimal?   @db.Decimal(11, 8) @map("delivery_lon")
+  deliveryFee     Decimal?   @db.Decimal(10, 2) @map("delivery_fee")
+  isDelivery      Boolean    @default(false) @map("is_delivery")
+  
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 
   user       User      @relation(fields: [userId], references: [id])
   inventory  Inventory @relation(fields: [inventoryId], references: [id])
+  pickup     Pickup?
 
   @@map("orders")
 }
@@ -193,17 +204,25 @@ model Claim {
   @@map("claims")
 }
 
+enum PickupType {
+  SHELTER_DELIVERY
+  CONSUMER_DELIVERY
+}
+
 model Pickup {
   id          String      @id @default(uuid())
-  claimId     String      @unique @map("claim_id")
+  claimId     String?     @unique @map("claim_id")
+  orderId     String?     @unique @map("order_id")
   driverId    String?     @map("driver_id")
+  type        PickupType  @default(SHELTER_DELIVERY)
   status      PickupStatus @default(UNASSIGNED)
   assignedAt  DateTime?   @map("assigned_at")
   pickedUpAt  DateTime?   @map("picked_up_at")
   deliveredAt DateTime?   @map("delivered_at")
   createdAt   DateTime    @default(now()) @map("created_at")
 
-  claim       Claim       @relation(fields: [claimId], references: [id])
+  claim       Claim?      @relation(fields: [claimId], references: [id])
+  order       Order?      @relation(fields: [orderId], references: [id])
   driver      Driver?     @relation(fields: [driverId], references: [id])
 
   @@map("pickups")

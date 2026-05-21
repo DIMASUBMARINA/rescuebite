@@ -182,6 +182,34 @@ function startTimeoutJobs() {
         });
       });
     }
+    const expiredConsumerPickups = await prisma.pickup.findMany({
+      where: {
+        status: 'ASSIGNED',
+        type: 'CONSUMER_DELIVERY',
+        assignedAt: { lt: new Date(now.getTime() - 15 * 60 * 1000) },
+      },
+      include: { order: true },
+    });
+
+    for (const pickup of expiredConsumerPickups) {
+      await prisma.$transaction(async (tx) => {
+        if (pickup.order) {
+          await tx.order.update({
+            where: { id: pickup.orderId },
+            data: { status: 'PAID' },
+          });
+        }
+
+        await tx.pickup.update({
+          where: { id: pickup.id },
+          data: {
+            status: 'UNASSIGNED',
+            driverId: null,
+            assignedAt: null,
+          },
+        });
+      });
+    }
   });
 }
 

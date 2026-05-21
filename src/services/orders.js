@@ -1,9 +1,11 @@
 const { prisma } = require('../config/database');
+const { calculateDistance } = require('../utils/haversine');
 
-async function create(userId, inventoryId) {
+async function create(userId, inventoryId, deliveryData = null) {
   return prisma.$transaction(async (tx) => {
     const item = await tx.inventory.findUnique({
       where: { id: inventoryId },
+      include: { restaurant: true },
     });
 
     if (!item) {
@@ -12,9 +14,33 @@ async function create(userId, inventoryId) {
 
     const available = Number(item.quantity) - Number(item.reservedQty);
     const purchasableStates = ['FRESH', 'DISCOUNTED'];
-
+    
     if (!purchasableStates.includes(item.state) || available <= 0) {
       throw new Error('Item not available');
+    }
+
+    let totalPrice = Number(item.currentPrice);
+    let isDelivery = false;
+    let deliveryFee = null;
+    let deliveryAddress = null;
+    let deliveryLat = null;
+    let deliveryLon = null;
+
+    if (deliveryData && deliveryData.address) {
+      isDelivery = true;
+      deliveryAddress = deliveryData.address;
+      deliveryLat = deliveryData.lat;
+      deliveryLon = deliveryData.lon;
+
+      const distance = calculateDistance(
+        Number(item.restaurant.lat),
+        Number(item.restaurant.lon),
+        deliveryData.lat,
+        deliveryLon
+      );
+
+      deliveryFee = Math.round(500 + distance * 100);
+      totalPrice += deliveryFee;
     }
 
     await tx.inventory.update({
@@ -29,20 +55,13 @@ async function create(userId, inventoryId) {
         userId,
         inventoryId,
         status: 'PENDING',
-        totalPrice: item.currentPrice,
+        totalPrice,
         reservedUntil,
-      },
-    });
-
-    await tx.auditLog.create({
-      data: {
-        entity: 'Order',
-        entityId: order.id,
-        action: 'STATUS_CHANGE',
-        field: 'status',
-        oldValue: null,
-        newValue: 'PENDING',
-        changedBy: userId,
+        isDelivery,
+        deliveryAddress,
+        deliveryLat,
+        deliveryLon,
+        deliveryFee,
       },
     });
 
@@ -100,4 +119,71 @@ async function confirm(orderId, userId) {
   });
 }
 
-module.exports = { create, confirm };
+async function pay(orderId, userId) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { inventory: { include: { restaurant: true } } },
+    });
+
+    if (!order || order.userId !== userId) {
+      throw new Error('Order not found');
+    }
+
+    if (order.status !== 'PENDING') {
+      throw new Error('Order not pending payment');
+    }
+
+    if (order.reservedUntil < new Date()) {
+      throw new Error('Reservation expired');
+    }
+
+    const updated = await tx.order.update({
+      where: { id: orderId },
+      data: { status: 'PAID' },
+    });
+
+    if (order.isDelivery) {
+      await tx.pickup.create({
+        data: {
+          orderId: order.id,
+          type: 'CONSUMER_DELIVERY',
+          status: 'UNASSIGNED',
+        },
+      });
+    }
+
+    return updated;
+  });
+}
+
+async function cancel(orderId, userId) {
+  return prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { inventory: true },
+    });
+
+    if (!order || order.userId !== userId) {
+      throw new Error('Order not found');
+    }
+
+    if (order.status !== 'PENDING') {
+      throw new Error('Can only cancel pending orders');
+    }
+
+    await tx.inventory.update({
+      where: { id: order.inventoryId },
+      data: { reservedQty: { decrement: 1 } },
+    });
+
+    const updated = await tx.order.update({
+      where: { id: orderId },
+      data: { status: 'CANCELLED' },
+    });
+
+    return updated;
+  });
+}
+
+module.exports = { create, confirm, cancel, pay };

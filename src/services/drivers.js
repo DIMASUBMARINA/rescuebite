@@ -9,14 +9,27 @@ async function getDriverByUserId(userId) {
 
 async function getAvailablePickups() {
   const now = new Date();
-
+  
   return prisma.pickup.findMany({
     where: {
       status: 'UNASSIGNED',
-      claim: {
-        status: 'CLAIMED',
-        expiresAt: { gt: now },
-      },
+      OR: [
+        // Shelter deliveries: linked to active claim
+        {
+          type: 'SHELTER_DELIVERY',
+          claim: {
+            status: 'CLAIMED',
+            expiresAt: { gt: now },
+          },
+        },
+        // Consumer deliveries: linked to paid order
+        {
+          type: 'CONSUMER_DELIVERY',
+          order: {
+            status: 'PAID',
+          },
+        },
+      ],
     },
     include: {
       claim: {
@@ -30,6 +43,20 @@ async function getAvailablePickups() {
           },
           shelter: {
             select: { shelterName: true, address: true, lat: true, lon: true },
+          },
+        },
+      },
+      order: {
+        include: {
+          inventory: {
+            include: {
+              restaurant: {
+                select: { businessName: true, address: true, lat: true, lon: true },
+              },
+            },
+          },
+          user: {
+            select: { email: true, phone: true },
           },
         },
       },
@@ -130,7 +157,7 @@ async function markDelivered(pickupId, userId) {
   }
 
   return prisma.$transaction(async (tx) => {
-    const updated = await tx.pickup.update({
+    await tx.pickup.update({
       where: { id: pickupId },
       data: {
         status: 'DELIVERED',
@@ -138,19 +165,17 @@ async function markDelivered(pickupId, userId) {
       },
     });
 
-    await tx.auditLog.create({
-      data: {
-        entity: 'Pickup',
-        entityId: pickupId,
-        action: 'STATUS_CHANGE',
-        field: 'status',
-        oldValue: 'IN_TRANSIT',
-        newValue: 'DELIVERED',
-        changedBy: userId,
-      },
-    });
+    if (pickup.type === 'CONSUMER_DELIVERY' && pickup.orderId) {
+      await tx.order.update({
+        where: { id: pickup.orderId },
+        data: { status: 'DELIVERED' },
+      });
+    }
 
-    return updated;
+    return tx.pickup.findUnique({
+      where: { id: pickupId },
+      include: { order: true, claim: true },
+    });
   });
 }
 
