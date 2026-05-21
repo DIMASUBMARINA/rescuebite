@@ -40,4 +40,26 @@ async function refresh(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, refresh };
+async function verifyEmail(req, res, next) {
+  try {
+    const { token } = req.query;
+    if (!token) {
+      return res.status(400).json({ status: 'error', message: 'Verification token is required' });
+    }
+    const result = await authService.verifyEmail(token);
+    res.json({ status: 'success', data: result, message: 'Email verified successfully' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function resendVerification(req, res, next) {
+  try {
+    const result = await authService.resendVerificationEmail(req.userId);
+    res.json({ status: 'success', data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { register, login, logout, refresh, verifyEmail, resendVerification };
