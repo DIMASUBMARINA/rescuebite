@@ -19,7 +19,6 @@ async function getInboxId() {
     return inboxId;
   }
 
-  // Create a dedicated inbox for RescueBite on first use
   const agentmail = getClient();
   const inbox = await agentmail.inboxes.create({ username: 'rescuebite-noreply' });
   inboxId = inbox.inboxId;
@@ -30,7 +29,7 @@ async function getInboxId() {
 async function sendVerificationEmail(toEmail, token) {
   const agentmail = getClient();
   const from = await getInboxId();
-  const verifyUrl = `${env.APP_BASE_URL}/api/auth/verify-email?token=${token}`;
+  const verifyUrl = `${env.APP_BASE_URL}/api/v1/auth/verify-email?token=${token}`;
 
   await agentmail.inboxes.messages.send(from, {
     to: toEmail,
