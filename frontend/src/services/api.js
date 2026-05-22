@@ -56,6 +56,10 @@ export const shelterAPI = {
   claim: (data) => api.post('/shelters/claims', data),
 };
 
+export const verificationAPI = {
+  submit: (data) => api.post('/verification/submit', data),
+};
+
 export const driverAPI = {
   availablePickups: () => api.get('/drivers/available-pickups'),
   claimPickup: (id) => api.post(`/drivers/pickups/${id}/claim`),

@@ -14,7 +14,6 @@ async function getAvailablePickups() {
     where: {
       status: 'UNASSIGNED',
       OR: [
-        // Shelter deliveries: linked to active claim
         {
           type: 'SHELTER_DELIVERY',
           claim: {
@@ -22,7 +21,6 @@ async function getAvailablePickups() {
             expiresAt: { gt: now },
           },
         },
-        // Consumer deliveries: linked to paid order
         {
           type: 'CONSUMER_DELIVERY',
           order: {

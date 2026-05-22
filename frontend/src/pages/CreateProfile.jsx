@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { profileAPI } from '../services/api';
+import VerificationUpload from '../components/VerificationUpload/VerificationUpload';
 
 function CreateProfile() {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  const [createdProfile, setCreatedProfile] = useState(null);
+  const [showVerification, setShowVerification] = useState(false);
 
   const [restaurantForm, setRestaurantForm] = useState({
     businessName: '',
@@ -30,8 +33,9 @@ function CreateProfile() {
   const handleRestaurantSubmit = async (e) => {
     e.preventDefault();
     try {
-      await profileAPI.createRestaurant(restaurantForm);
-      navigate('/restaurant');
+      const res = await profileAPI.createRestaurant(restaurantForm);
+      setCreatedProfile({ ...res.data.data, type: 'RESTAURANT' });
+      setShowVerification(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create profile');
     }
@@ -40,8 +44,9 @@ function CreateProfile() {
   const handleShelterSubmit = async (e) => {
     e.preventDefault();
     try {
-      await profileAPI.createShelter(shelterForm);
-      navigate('/shelter');
+      const res = await profileAPI.createShelter(shelterForm);
+      setCreatedProfile({ ...res.data.data, type: 'SHELTER' });
+      setShowVerification(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create profile');
     }
@@ -50,14 +55,50 @@ function CreateProfile() {
   const handleDriverSubmit = async (e) => {
     e.preventDefault();
     try {
-      await profileAPI.createDriver(driverForm);
-      navigate('/driver');
+      const res = await profileAPI.createDriver(driverForm);
+      setCreatedProfile({ ...res.data.data, type: 'DRIVER' });
+      setShowVerification(true);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create profile');
     }
   };
 
+  const handleVerificationComplete = () => {
+    if (createdProfile.type === 'RESTAURANT') navigate('/restaurant');
+    if (createdProfile.type === 'SHELTER') navigate('/shelter');
+    if (createdProfile.type === 'DRIVER') navigate('/driver');
+  };
+
   if (!user) return <div>Please login first</div>;
+
+  if (showVerification && createdProfile) {
+    return (
+      <div className="card" style={{ maxWidth: '500px', margin: '40px auto' }}>
+        <h2>Profile Created!</h2>
+        <p style={{ color: '#666', marginBottom: '20px' }}>
+          Your profile is pending verification. Submit documents below to get approved.
+        </p>
+        <VerificationUpload 
+          profileType={createdProfile.type}
+          profileId={createdProfile.id}
+          onSubmitted={handleVerificationComplete}
+        />
+        <button 
+          onClick={handleVerificationComplete}
+          style={{ 
+            marginTop: '15px', 
+            background: 'none', 
+            border: 'none', 
+            color: '#666',
+            textDecoration: 'underline',
+            cursor: 'pointer'
+          }}
+        >
+          Skip for now →
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="card" style={{ maxWidth: '500px', margin: '40px auto' }}>

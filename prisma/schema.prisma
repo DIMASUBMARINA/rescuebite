@@ -61,6 +61,39 @@ enum Allergen {
   SESAME
 }
 
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model VerificationDocument {
+  id          String   @id @default(uuid())
+  profileType String   @map("profile_type")
+  profileId   String   @map("profile_id")
+  documentUrl String   @map("document_url")
+  documentType String  @map("document_type")
+  status      VerificationStatus @default(PENDING)
+  reviewedBy  String?  @map("reviewed_by")
+  reviewNote  String?  @map("review_note")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant? @relation(fields: [restaurantId], references: [id])
+  restaurantId String?  @map("restaurant_id")
+  
+  shelter Shelter? @relation(fields: [shelterId], references: [id])
+  shelterId String? @map("shelter_id")
+  
+  driver Driver? @relation(fields: [driverId], references: [id])
+  driverId String? @map("driver_id")
+
+  @@index([profileType, profileId])
+  @@index([status])
+  @@map("verification_documents")
+}
+
+
 
 model User {
   id            String    @id @default(uuid())
@@ -103,6 +136,8 @@ model Restaurant {
   lat           Decimal  @db.Decimal(10, 8)
   lon           Decimal  @db.Decimal(11, 8)
   isVerified    Boolean  @default(false) @map("is_verified")
+  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
+  documents VerificationDocument[]
   createdAt     DateTime @default(now()) @map("created_at")
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -120,6 +155,8 @@ model Shelter {
   lat          Decimal  @db.Decimal(10, 8)
   lon          Decimal  @db.Decimal(11, 8)
   isVerified   Boolean  @default(false) @map("is_verified")
+  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
+  documents VerificationDocument[]
   createdAt    DateTime @default(now()) @map("created_at")
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -134,6 +171,9 @@ model Driver {
   licenseNo    String   @map("license_no")
   vehiclePlate String   @map("vehicle_plate")
   isActive     Boolean  @default(true) @map("is_active")
+  isVerified Boolean @default(false) @map("is_verified")
+  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
+  documents VerificationDocument[]
   createdAt    DateTime @default(now()) @map("created_at")
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -171,7 +211,7 @@ model Order {
   id            String      @id @default(uuid())
   userId        String      @map("user_id")
   inventoryId   String      @map("inventory_id")
-  quantity      Int         @default(1)          // ADD THIS
+  quantity      Int         @default(1)          
   status        OrderStatus @default(PENDING)
   totalPrice    Decimal     @db.Decimal(10, 2) @map("total_price")
   reservedUntil DateTime?   @map("reserved_until")
@@ -292,7 +332,7 @@ model EmailQueue {
   template  String
   subject   String
   data      Json
-  status    String   @default("QUEUED") // QUEUED, SENT, FAILED, RETRY
+  status    String   @default("QUEUED")  
   retryCount Int     @default(0)
   error     String?
   sentAt    DateTime? @map("sent_at")
@@ -308,7 +348,7 @@ model EmailLog {
   template  String
   subject   String
   data      Json
-  status    String   // SENT, FAILED
+  status    String   
   error     String?
   sentAt    DateTime? @map("sent_at")
   createdAt DateTime @default(now()) @map("created_at")

@@ -10,7 +10,6 @@ router.post('/login',              authLimiter, validate(loginSchema),    authCo
 router.post('/logout',             validate(refreshSchema),               authController.logout);
 router.post('/refresh',            validate(refreshSchema),               authController.refresh);
 
-// Email verification
 router.get('/verify-email',                                               authController.verifyEmail);
 router.post('/resend-verification', authLimiter, verifyToken,             authController.resendVerification);
 

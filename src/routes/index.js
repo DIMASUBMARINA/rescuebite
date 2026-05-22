@@ -8,9 +8,11 @@ const shelterRoutes = require('./shelters');
 const driverRoutes = require('./drivers');
 const adminRoutes = require('./admin');
 const profileRoutes = require('./profile');
+const verificationRoutes = require('./verification');
 
 const router = express.Router();
 
+router.use('/verification', verificationRoutes);
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/inventory', inventoryRoutes);
