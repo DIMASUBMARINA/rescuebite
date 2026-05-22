@@ -2,16 +2,16 @@ const ordersService = require('../services/orders');
 
 async function create(req, res, next) {
   try {
-    const { inventoryId, deliveryAddress, deliveryLat, deliveryLon } = req.body;
-    
+    const { inventoryId, quantity, deliveryAddress, deliveryLat, deliveryLon } = req.body;
+
     const deliveryData = deliveryAddress ? {
       address: deliveryAddress,
       lat: deliveryLat,
       lon: deliveryLon,
     } : null;
 
-    const order = await ordersService.create(req.userId, inventoryId, deliveryData);
-    
+    const order = await ordersService.create(req.userId, inventoryId, quantity, deliveryData);
+
     res.status(201).json({
       status: 'success',
       data: order,

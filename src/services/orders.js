@@ -1,7 +1,7 @@
 const { prisma } = require('../config/database');
 const { calculateDistance } = require('../utils/haversine');
 
-async function create(userId, inventoryId, deliveryData = null) {
+async function create(userId, inventoryId, quantity = 1, deliveryData = null) {
   return prisma.$transaction(async (tx) => {
     const item = await tx.inventory.findUnique({
       where: { id: inventoryId },
@@ -14,12 +14,16 @@ async function create(userId, inventoryId, deliveryData = null) {
 
     const available = Number(item.quantity) - Number(item.reservedQty);
     const purchasableStates = ['FRESH', 'DISCOUNTED'];
-    
+
     if (!purchasableStates.includes(item.state) || available <= 0) {
       throw new Error('Item not available');
     }
 
-    let totalPrice = Number(item.currentPrice);
+    if (quantity > available) {
+      throw new Error(`Only ${available} items available`);
+    }
+
+    let totalPrice = Number(item.currentPrice) * quantity;  
     let isDelivery = false;
     let deliveryFee = null;
     let deliveryAddress = null;
@@ -45,7 +49,7 @@ async function create(userId, inventoryId, deliveryData = null) {
 
     await tx.inventory.update({
       where: { id: inventoryId },
-      data: { reservedQty: { increment: 1 } },
+      data: { reservedQty: { increment: quantity } },  
     });
 
     const reservedUntil = new Date(Date.now() + 10 * 60 * 1000);
@@ -54,6 +58,7 @@ async function create(userId, inventoryId, deliveryData = null) {
       data: {
         userId,
         inventoryId,
+        quantity,                                        
         status: 'PENDING',
         totalPrice,
         reservedUntil,
@@ -88,6 +93,16 @@ async function confirm(orderId, userId) {
 
     if (order.reservedUntil < new Date()) {
       throw new Error('Reservation expired');
+    }
+
+    if (order.status === 'PENDING') {
+      await tx.inventory.update({
+        where: { id: order.inventoryId },
+        data: {
+          quantity: { decrement: order.quantity },      
+          reservedQty: { decrement: order.quantity },   
+        },
+      });
     }
 
     await tx.inventory.update({
@@ -260,7 +275,7 @@ async function cancel(orderId, userId) {
 
     await tx.inventory.update({
       where: { id: order.inventoryId },
-      data: { reservedQty: { decrement: 1 } },
+      data: { reservedQty: { decrement: order.quantity } },  
     });
 
     const updated = await tx.order.update({

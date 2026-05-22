@@ -168,25 +168,26 @@ model Inventory {
 }
 
 model Order {
-  id             String      @id @default(uuid())
-  userId         String      @map("user_id")
-  inventoryId    String      @unique @map("inventory_id")
-  status         OrderStatus @default(PENDING)
-  totalPrice     Decimal     @db.Decimal(10, 2) @map("total_price")
-  reservedUntil  DateTime?   @map("reserved_until")
+  id            String      @id @default(uuid())
+  userId        String      @map("user_id")
+  inventoryId   String      @map("inventory_id")
+  quantity      Int         @default(1)          // ADD THIS
+  status        OrderStatus @default(PENDING)
+  totalPrice    Decimal     @db.Decimal(10, 2) @map("total_price")
+  reservedUntil DateTime?   @map("reserved_until")
   
-  deliveryAddress String?    @map("delivery_address")
-  deliveryLat     Decimal?   @db.Decimal(10, 8) @map("delivery_lat")
-  deliveryLon     Decimal?   @db.Decimal(11, 8) @map("delivery_lon")
-  deliveryFee     Decimal?   @db.Decimal(10, 2) @map("delivery_fee")
-  isDelivery      Boolean    @default(false) @map("is_delivery")
-  
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
+  deliveryAddress String?   @map("delivery_address")
+  deliveryLat     Decimal?  @db.Decimal(10, 8) @map("delivery_lat")
+  deliveryLon     Decimal?  @db.Decimal(11, 8) @map("delivery_lon")
+  deliveryFee     Decimal?  @db.Decimal(10, 2) @map("delivery_fee")
+  isDelivery      Boolean   @default(false) @map("is_delivery")
 
-  user       User      @relation(fields: [userId], references: [id])
-  inventory  Inventory @relation(fields: [inventoryId], references: [id])
-  pickup     Pickup?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User      @relation(fields: [userId], references: [id])
+  inventory Inventory @relation(fields: [inventoryId], references: [id])
+  pickup    Pickup?
 
   @@map("orders")
 }
