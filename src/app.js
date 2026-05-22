@@ -44,12 +44,10 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-if (env.NODE_ENV !== 'test') {
-  startDecayJob(60);
-  startTimeoutJobs();
-  app.listen(env.PORT, () => {
-    console.log(`Server running on port ${env.PORT}`);
-  });
-}
+startDecayJob(60);
+startTimeoutJobs();
+app.listen(env.PORT, () => {
+  console.log(`Server running on port ${env.PORT}`);
+});
 
 module.exports = { app };

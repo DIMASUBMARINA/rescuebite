@@ -1,6 +1,27 @@
-require('dotenv').config({ path: '.env.test' });
+const { PrismaClient } = require('@prisma/client');
 
-process.env.DISABLE_CRON = 'true';
+const prisma = new PrismaClient({
+  datasources: { db: { url: process.env.DATABASE_URL } }
+});
 
-process.env.AGENTMAIL_API_KEY = 'test-key';
-process.env.AGENTMAIL_INBOX_ID = 'test@test.agentmail.to';
+beforeAll(async () => {
+  await prisma.$connect();
+});
+
+beforeEach(async () => {
+  const tablenames = await prisma.$queryRaw`
+    SELECT tablename FROM pg_tables WHERE schemaname='public'
+  `;
+  
+  for (const { tablename } of tablenames) {
+    if (tablename !== '_prisma_migrations') {
+      await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${tablename}" CASCADE;`);
+    }
+  }
+});
+
+afterAll(async () => {
+  await prisma.$disconnect();
+});
+
+module.exports = { prisma };
