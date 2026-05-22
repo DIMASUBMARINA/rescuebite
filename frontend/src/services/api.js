@@ -54,6 +54,8 @@ export const orderAPI = {
 export const shelterAPI = {
   availableDonations: () => api.get('/shelters/available-donations'),
   claim: (data) => api.post('/shelters/claims', data),
+  myClaims: () => api.get('/shelters/my-claims'), 
+  confirmReceipt: (claimId) => api.post(`/shelters/claims/${claimId}/confirm-receipt`),
 };
 
 export const verificationAPI = {
@@ -66,4 +68,5 @@ export const driverAPI = {
   markPickedUp: (id) => api.post(`/drivers/pickups/${id}/mark-picked-up`),
   markDelivered: (id) => api.post(`/drivers/pickups/${id}/mark-delivered`),
 };
+
 

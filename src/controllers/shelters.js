@@ -32,4 +32,14 @@ async function confirmReceipt(req, res, next) {
   }
 }
 
-module.exports = { getAvailableDonations, claimDonation, confirmReceipt };
+async function getMyClaims(req, res, next) {
+  try {
+    const claims = await sheltersService.getMyClaims(req.userId);
+    res.json({ status: 'success', data: claims });
+  } catch (err) {
+    next(err);
+  }
+}
+
+
+module.exports = { getAvailableDonations, claimDonation, confirmReceipt, getMyClaims };

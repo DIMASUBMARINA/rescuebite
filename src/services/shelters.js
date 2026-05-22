@@ -198,4 +198,29 @@ async function confirmReceipt(userId, claimId) {
   });
 }
 
-module.exports = { findAvailableItems, claimItem, confirmReceipt, notifySheltersOfFreeItems };
+async function getMyClaims(userId) {
+  const shelter = await prisma.shelter.findUnique({
+    where: { userId },
+  });
+
+  if (!shelter) {
+    throw new Error('Shelter profile not found');
+  }
+
+  return prisma.claim.findMany({
+    where: { shelterId: shelter.id },
+    include: {
+      inventory: {
+        include: {
+          restaurant: {
+            select: { businessName: true, address: true },
+          },
+        },
+      },
+      pickup: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+module.exports = { findAvailableItems, claimItem, confirmReceipt, notifySheltersOfFreeItems, getMyClaims };
