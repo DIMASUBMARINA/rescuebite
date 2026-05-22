@@ -69,4 +69,14 @@ export const driverAPI = {
   markDelivered: (id) => api.post(`/drivers/pickups/${id}/mark-delivered`),
 };
 
+export const adminAPI = {
+  users: () => api.get('/admin/users'),
+  suspend: (id) => api.post(`/admin/users/${id}/suspend`),
+  unsuspend: (id) => api.post(`/admin/users/${id}/unsuspend`),
+  pendingVerifications: () => api.get('/admin/verification/pending'),
+  reviewDocument: (id, data) => api.post(`/admin/verification/${id}/review`, data),
+  processEmails: () => api.post('/admin/process-emails'),
+};
+
+
 
