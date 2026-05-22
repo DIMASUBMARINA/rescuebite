@@ -19,6 +19,11 @@ function RestaurantDashboard() {
     loadMyOrders();
   }, []);
 
+  const ALLERGEN_OPTIONS = [
+    'GLUTEN', 'DAIRY', 'EGGS', 'FISH', 'SHELLFISH',
+    'TREE_NUTS', 'PEANUTS', 'WHEAT', 'SOY', 'SESAME'
+  ];
+
   const loadMyDishes = async () => {
     try {
       const res = await inventoryAPI.myDishes();
@@ -37,14 +42,25 @@ function RestaurantDashboard() {
     }
   };
 
+    const toggleAllergen = (allergen) => {
+    setForm(prev => ({
+      ...prev,
+      allergens: prev.allergens.includes(allergen)
+        ? prev.allergens.filter(a => a !== allergen)
+        : [...prev.allergens, allergen]
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const data = {
-        ...form,
+        name: form.name,
+        description: form.description,
         originalPrice: parseFloat(form.originalPrice),
         quantity: parseInt(form.quantity),
-        ingredients: form.ingredients ? JSON.parse(form.ingredients) : {},
+        expiresAt: form.expiresAt,
+        ingredients: form.ingredients ? form.ingredients.split(',').map(i => i.trim()) : [],
         allergens: form.allergens,
       };
       
@@ -126,10 +142,42 @@ function RestaurantDashboard() {
             <input type="datetime-local" value={form.expiresAt} onChange={(e) => setForm({...form, expiresAt: e.target.value})} required />
           </div>
           <div className="form-group">
-            <label>Ingredients (JSON)</label>
-            <textarea value={form.ingredients} onChange={(e) => setForm({...form, ingredients: e.target.value})} placeholder='{"flour": "wheat"}' />
+            <label>Ingredients (comma-separated)</label>
+            <input 
+              value={form.ingredients} 
+              onChange={(e) => setForm({...form, ingredients: e.target.value})} 
+              placeholder="flour, eggs, milk, sugar"
+            />
           </div>
-          <button type="submit" className="btn btn-primary">Create Item</button>
+          
+          {/* ADD THIS ALLERGEN SECTION */}
+          <div className="form-group">
+            <label>Allergens (select all that apply)</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+              {ALLERGEN_OPTIONS.map(allergen => (
+                <label key={allergen} style={{
+                  padding: '6px 12px',
+                  borderRadius: '4px',
+                  border: `2px solid ${form.allergens.includes(allergen) ? '#dc3545' : '#ddd'}`,
+                  background: form.allergens.includes(allergen) ? '#fff5f5' : 'white',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: form.allergens.includes(allergen) ? 'bold' : 'normal',
+                  color: form.allergens.includes(allergen) ? '#dc3545' : '#333',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={form.allergens.includes(allergen)}
+                    onChange={() => toggleAllergen(allergen)}
+                    style={{ display: 'none' }}
+                  />
+                  {form.allergens.includes(allergen) ? '✓ ' : ''}{allergen}
+                </label>
+              ))}
+            </div>
+          </div>
+          
+          <button type="submit" className="btn btn-primary" style={{ marginTop: '15px' }}>Create Item</button>
         </form>
       </div>
 

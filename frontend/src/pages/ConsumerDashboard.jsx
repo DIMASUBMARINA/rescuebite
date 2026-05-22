@@ -6,6 +6,7 @@ function ConsumerDashboard() {
   const [items, setItems] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [allergies, setAllergies] = useState([]);
   const [error, setError] = useState('');
   const [quantities, setQuantities] = useState({});
 
@@ -186,7 +187,6 @@ function ConsumerDashboard() {
       <div>
         <h2>Consumer Dashboard</h2>
         
-        <AllergyManager /> 
         
       </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { userAPI } from '../services/api';
+import { userAPI } from '../../services/api';
 
 const ALLERGEN_OPTIONS = [
   'GLUTEN', 'DAIRY', 'EGGS', 'FISH', 'SHELLFISH',
