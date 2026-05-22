@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { inventoryAPI, orderAPI } from '../services/api';
+import AllergyManager from "../components/AllergyManager/AllergyManager";
 
 function ConsumerDashboard() {
   const [items, setItems] = useState([]);
@@ -12,6 +13,8 @@ function ConsumerDashboard() {
     loadItems();
     loadMyOrders();
   }, []);
+
+  
 
   const loadItems = async () => {
     try {
@@ -62,6 +65,20 @@ function ConsumerDashboard() {
     }
   };
 
+    const loadAllergies = async () => {
+    try {
+      const res = await userAPI.getAllergies();
+      setAllergies(res.data.data);
+    } catch (err) {
+      console.error('Failed to load allergies');
+    }
+  };
+
+  const hasAllergenConflict = (item) => {
+  return item.allergens?.some(a => allergies.includes(a));
+};
+
+
   const handlePay = async (orderId) => {
     try {
       await orderAPI.pay(orderId);
@@ -98,6 +115,7 @@ function ConsumerDashboard() {
   return (
     <div>
       <h2>Consumer Dashboard</h2>
+      <AllergyManager />
       {error && <div className="error">{error}</div>}
       
       <h3>Available Items</h3>
@@ -110,13 +128,27 @@ function ConsumerDashboard() {
             <div key={item.id} className="card">
               <h4>{item.name}</h4>
               <p>{item.description}</p>
+                          {hasAllergenConflict(item) && (
+              <div style={{ 
+                background: '#fff3cd', 
+                padding: '8px', 
+                borderRadius: '4px',
+                marginTop: '10px',
+                marginBottom: '10px',
+                color: '#856404',
+                fontSize: '13px'
+              }}>
+                ⚠️ Contains your allergens: {item.allergens.filter(a => allergies.includes(a)).join(', ')}
+              </div>
+            )}
+            
               <p>
                 <span className={`badge ${getStatusBadge(item.state)}`}>{item.state}</span>
               </p>
               <p><strong>Price:</strong> {item.currentPrice} KZT</p>
               <p><strong>Stock:</strong> {item.quantity - item.reservedQty} left</p>
+
               
-              {/* SIMPLE DROPDOWN - HARD TO MISS */}
               <div className="quantity-row">
                 <label>Qty: </label>
                 <select 
@@ -149,6 +181,13 @@ function ConsumerDashboard() {
             </div>
           );
         })}
+      </div>
+
+      <div>
+        <h2>Consumer Dashboard</h2>
+        
+        <AllergyManager /> 
+        
       </div>
 
       <h3>My Orders</h3>

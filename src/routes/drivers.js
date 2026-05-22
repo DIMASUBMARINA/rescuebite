@@ -8,5 +8,6 @@ router.get('/available-pickups', verifyToken, requireRole('DRIVER'), driversCont
 router.post('/pickups/:id/claim', verifyToken, requireRole('DRIVER'), driversController.claimPickup);
 router.post('/pickups/:id/mark-picked-up', verifyToken, requireRole('DRIVER'), driversController.markPickedUp);
 router.post('/pickups/:id/mark-delivered', verifyToken, requireRole('DRIVER'), driversController.markDelivered);
+router.get('/my-pickups', verifyToken, requireRole('DRIVER'), driversController.getMyPickups);
 
 module.exports = router;

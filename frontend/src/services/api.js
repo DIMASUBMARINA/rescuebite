@@ -64,6 +64,7 @@ export const verificationAPI = {
 
 export const driverAPI = {
   availablePickups: () => api.get('/drivers/available-pickups'),
+  myPickups: () => api.get('/drivers/my-pickups'), 
   claimPickup: (id) => api.post(`/drivers/pickups/${id}/claim`),
   markPickedUp: (id) => api.post(`/drivers/pickups/${id}/mark-picked-up`),
   markDelivered: (id) => api.post(`/drivers/pickups/${id}/mark-delivered`),
@@ -78,5 +79,10 @@ export const adminAPI = {
   processEmails: () => api.post('/admin/process-emails'),
 };
 
-
+export const userAPI = {
+  getProfile: () => api.get('/users/profile'),
+  updateProfile: (data) => api.patch('/users/profile', data),
+  getAllergies: () => api.get('/users/allergies'),
+  updateAllergies: (data) => api.patch('/users/allergies', data),
+};
 

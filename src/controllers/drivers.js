@@ -40,4 +40,14 @@ async function markDelivered(req, res, next) {
   }
 }
 
-module.exports = { getAvailablePickups, claimPickup, markPickedUp, markDelivered };
+async function getMyPickups(req, res, next) {
+  try {
+    const pickups = await driversService.getMyPickups(req.userId);
+    res.json({ status: 'success', data: pickups });
+  } catch (err) {
+    next(err);
+  }
+}
+
+
+module.exports = { getAvailablePickups, claimPickup, markPickedUp, markDelivered, getMyPickups };

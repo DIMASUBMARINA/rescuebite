@@ -177,4 +177,47 @@ async function markDelivered(pickupId, userId) {
   });
 }
 
-module.exports = { getAvailablePickups, claimPickup, markPickedUp, markDelivered };
+async function getMyPickups(userId) {
+  const driver = await getDriverByUserId(userId);
+  
+  return prisma.pickup.findMany({
+    where: {
+      driverId: driver.id,
+      status: { in: ['ASSIGNED', 'IN_TRANSIT'] },
+    },
+    include: {
+      claim: {
+        include: {
+          inventory: {
+            include: {
+              restaurant: {
+                select: { businessName: true, address: true, lat: true, lon: true },
+              },
+            },
+          },
+          shelter: {
+            select: { shelterName: true, address: true, lat: true, lon: true },
+          },
+        },
+      },
+      order: {
+        include: {
+          inventory: {
+            include: {
+              restaurant: {
+                select: { businessName: true, address: true, lat: true, lon: true },
+              },
+            },
+          },
+          user: {
+            select: { email: true, phone: true },
+          },
+        },
+      },
+    },
+    orderBy: { assignedAt: 'desc' },
+  });
+}
+
+module.exports = { getAvailablePickups, claimPickup, markPickedUp, markDelivered, getMyPickups };
+

@@ -219,7 +219,7 @@ async function getMyClaims(userId) {
       },
       pickup: true,
     },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { claimedAt: 'desc' },
   });
 }
 

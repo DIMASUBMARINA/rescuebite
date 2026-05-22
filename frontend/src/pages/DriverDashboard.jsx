@@ -9,16 +9,15 @@ function DriverDashboard() {
   useEffect(() => {
     loadPickups();
   }, []);
+  
 
   const loadPickups = async () => {
     try {
-      const res = await driverAPI.availablePickups();
-      setAvailablePickups(res.data.data);
+      const availableRes = await driverAPI.availablePickups();
+      setAvailablePickups(availableRes.data.data);
       
-      // Filter my assigned pickups
-      const allPickups = res.data.data;
-      const myAssigned = allPickups.filter(p => p.status === 'ASSIGNED' || p.status === 'IN_TRANSIT');
-      setMyPickups(myAssigned);
+      const myRes = await driverAPI.myPickups(); 
+      setMyPickups(myRes.data.data);
     } catch (err) {
       setError('Failed to load pickups');
     }
