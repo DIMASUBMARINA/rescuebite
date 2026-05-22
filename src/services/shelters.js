@@ -1,5 +1,44 @@
 const { prisma } = require('../config/database');
 const { calculateDistance } = require('../utils/haversine');
+const { queueEmail } = require('./email');
+
+async function notifySheltersOfFreeItems(freeItems) {
+  const shelters = await prisma.shelter.findMany({
+    where: { isVerified: true },
+    include: { user: true },
+  });
+
+  for (const shelter of shelters) {
+    const nearbyItems = freeItems.filter(item => {
+      const distance = calculateDistance(
+        Number(shelter.lat), Number(shelter.lon),
+        Number(item.restaurant.lat), Number(item.restaurant.lon)
+      );
+      return distance <= 10;
+    });
+
+    if (nearbyItems.length === 0) continue;
+
+    await queueEmail({
+      to: shelter.user.email,
+      template: 'DONATION_ALERT',
+      subject: '🍽️ Free food available near you!',
+      data: {
+        items: nearbyItems.map(item => ({
+          name: item.name,
+          quantity: item.quantity - item.reservedQty,
+          restaurantName: item.restaurant.businessName,
+          distance: calculateDistance(
+            Number(shelter.lat), Number(shelter.lon),
+            Number(item.restaurant.lat), Number(item.restaurant.lon)
+          ).toFixed(1),
+        })),
+        shelterName: shelter.shelterName,
+        claimDeadline: new Date(Date.now() + 30 * 60 * 1000),
+      },
+    });
+  }
+}
 
 async function findAvailableItems(userId, maxDistance = 10) {
   const shelter = await prisma.shelter.findUnique({
@@ -159,4 +198,4 @@ async function confirmReceipt(userId, claimId) {
   });
 }
 
-module.exports = { findAvailableItems, claimItem, confirmReceipt };
+module.exports = { findAvailableItems, claimItem, confirmReceipt, notifySheltersOfFreeItems };

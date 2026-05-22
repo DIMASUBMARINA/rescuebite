@@ -1,6 +1,19 @@
 const cron = require('node-cron');
 const { prisma } = require('./database');
 const { calculateState, calculatePrice } = require('../services/decayEngine');
+const { processQueue } = require('../services/email');
+
+cron.schedule('*/30 * * * * *', async () => {
+  try {
+    const processed = await processQueue(10);
+    if (processed > 0) {
+      console.log(`[EMAIL WORKER] Processed ${processed} emails`);
+    }
+  } catch (err) {
+    console.error('[EMAIL WORKER] Error:', err);
+  }
+});
+
 
 function startDecayJob(intervalMinutes = 60) {
   console.log(`Starting decay job (every ${intervalMinutes} minutes)`);
@@ -24,6 +37,8 @@ async function runDecayCycle() {
     });
 
     console.log(`Checking ${items.length} items for state transitions`);
+
+    const newlyFreeItems = [];
 
     for (const item of items) {
       const newState = calculateState(item, now);
@@ -65,13 +80,28 @@ async function runDecayCycle() {
           }
         });
 
+        if (newState === 'FREE') {
+          newlyFreeItems.push({
+            ...item,
+            state: newState,
+            currentPrice: newPrice,
+          });
+        }
+
         console.log(`Item ${item.id}: ${item.state} → ${newState} (price: ${newPrice})`);
       }
     }
+
+    if (newlyFreeItems.length > 0) {
+      console.log(`Notifying shelters about ${newlyFreeItems.length} newly FREE items...`);
+      await notifySheltersOfFreeItems(newlyFreeItems);
+    }
+
   } catch (err) {
     console.error('Decay cycle error:', err);
   }
 }
+
 
 function startTimeoutJobs() {
   cron.schedule('* * * * *', async () => {

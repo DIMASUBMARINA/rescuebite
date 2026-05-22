@@ -6,6 +6,7 @@ function ConsumerDashboard() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [quantities, setQuantities] = useState({});
 
   useEffect(() => {
     loadItems();
@@ -19,6 +20,9 @@ function ConsumerDashboard() {
         ['FRESH', 'DISCOUNTED'].includes(item.state)
       );
       setItems(purchasableItems);
+      const initial = {};
+      purchasableItems.forEach(i => initial[i.id] = 1);
+      setQuantities(initial);
     } catch (err) {
       setError('Failed to load items');
     }
@@ -35,18 +39,20 @@ function ConsumerDashboard() {
 
   const handleOrder = async (item, withDelivery = false) => {
     setLoading(true);
+    setError('');
     try {
+      const qty = quantities[item.id] || 1;
       const orderData = {
         inventoryId: item.id,
+        quantity: qty,
         ...(withDelivery && {
           deliveryAddress: 'Tole Bi Street 100, Almaty',
           deliveryLat: 43.25,
           deliveryLon: 76.91,
         }),
       };
-      
       await orderAPI.create(orderData);
-      alert('Order created! Status: PENDING. Please pay to confirm.');
+      alert(`Ordered ${qty} x ${item.name}`);
       loadItems();
       loadMyOrders();
     } catch (err) {
@@ -59,7 +65,7 @@ function ConsumerDashboard() {
   const handlePay = async (orderId) => {
     try {
       await orderAPI.pay(orderId);
-      alert('Payment successful! Status: PAID. Waiting for restaurant confirmation.');
+      alert('Payment successful!');
       loadMyOrders();
     } catch (err) {
       alert(err.response?.data?.message || 'Payment failed');
@@ -96,36 +102,53 @@ function ConsumerDashboard() {
       
       <h3>Available Items</h3>
       <div className="grid">
-        {items.map(item => (
-          <div key={item.id} className="card">
-            <h4>{item.name}</h4>
-            <p>{item.description}</p>
-            <p>
-              <span className={`badge ${getStatusBadge(item.state)}`}>{item.state}</span>
-            </p>
-            <p><strong>Price:</strong> {item.currentPrice} KZT</p>
-            <p><strong>Original:</strong> {item.originalPrice} KZT</p>
-            <p><strong>Expires:</strong> {new Date(item.expiresAt).toLocaleString()}</p>
-            <p><strong>Allergens:</strong> {item.allergens?.join(', ') || 'None'}</p>
-            
-            <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
-              <button 
-                className="btn btn-primary" 
-                onClick={() => handleOrder(item, false)}
-                disabled={loading}
-              >
-                Order Pickup
-              </button>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => handleOrder(item, true)}
-                disabled={loading}
-              >
-                Order Delivery
-              </button>
+        {items.map(item => {
+          const qty = quantities[item.id] || 1;
+          const total = (item.currentPrice * qty).toFixed(0);
+          
+          return (
+            <div key={item.id} className="card">
+              <h4>{item.name}</h4>
+              <p>{item.description}</p>
+              <p>
+                <span className={`badge ${getStatusBadge(item.state)}`}>{item.state}</span>
+              </p>
+              <p><strong>Price:</strong> {item.currentPrice} KZT</p>
+              <p><strong>Stock:</strong> {item.quantity - item.reservedQty} left</p>
+              
+              {/* SIMPLE DROPDOWN - HARD TO MISS */}
+              <div className="quantity-row">
+                <label>Qty: </label>
+                <select 
+                  value={qty}
+                  onChange={(e) => setQuantities({...quantities, [item.id]: parseInt(e.target.value)})}
+                >
+                  {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+                <span> = {total} KZT</span>
+              </div>
+              
+              <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => handleOrder(item, false)}
+                  disabled={loading}
+                >
+                  Order Pickup
+                </button>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => handleOrder(item, true)}
+                  disabled={loading}
+                >
+                  Order Delivery
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <h3>My Orders</h3>
@@ -133,61 +156,20 @@ function ConsumerDashboard() {
         {orders.map(order => (
           <div key={order.id} className="card">
             <p><strong>{order.inventory?.name}</strong></p>
-            <p>
-              <span className={`badge ${getStatusBadge(order.status)}`}>{order.status}</span>
-            </p>
+            <p><span className={`badge ${getStatusBadge(order.status)}`}>{order.status}</span></p>
+            <p><strong>Qty:</strong> {order.quantity || 1}</p>
             <p><strong>Total:</strong> {order.totalPrice} KZT</p>
             {order.deliveryFee && <p><strong>Delivery:</strong> {order.deliveryFee} KZT</p>}
-            <p><strong>Created:</strong> {new Date(order.createdAt).toLocaleString()}</p>
             
             {order.status === 'PENDING' && (
-              <button 
-                className="btn btn-primary" 
-                onClick={() => handlePay(order.id)}
-                style={{ width: '100%', marginTop: '10px' }}
-              >
+              <button className="btn btn-primary" onClick={() => handlePay(order.id)}>
                 Pay Now
               </button>
             )}
-            
-            {order.status === 'PAID' && (
-              <p style={{ marginTop: '10px', color: '#666' }}>
-                ⏳ Waiting for restaurant confirmation...
-              </p>
-            )}
-            
-            {order.status === 'CONFIRMED' && (
-              <p style={{ marginTop: '10px', color: '#666' }}>
-                👨‍🍳 Restaurant is preparing your order...
-              </p>
-            )}
-            
             {order.status === 'READY_FOR_PICKUP' && !order.isDelivery && (
-              <button 
-                className="btn btn-primary" 
-                onClick={() => handleMarkPickedUp(order.id)}
-                style={{ width: '100%', marginTop: '10px' }}
-              >
-                I Picked Up My Order
+              <button className="btn btn-primary" onClick={() => handleMarkPickedUp(order.id)}>
+                I Picked Up
               </button>
-            )}
-            
-            {order.status === 'READY_FOR_PICKUP' && order.isDelivery && (
-              <p style={{ marginTop: '10px', color: '#28a745' }}>
-                🚚 Your delivery is on the way!
-              </p>
-            )}
-            
-            {order.status === 'DELIVERED' && (
-              <p style={{ marginTop: '10px', color: '#28a745' }}>
-                ✅ Delivered! Enjoy your meal!
-              </p>
-            )}
-            
-            {order.status === 'COMPLETED' && (
-              <p style={{ marginTop: '10px', color: '#28a745' }}>
-                ✅ Completed! Enjoy your meal!
-              </p>
             )}
           </div>
         ))}

@@ -211,10 +211,16 @@ async function confirmByRestaurant(orderId, userId) {
   });
 }
 
+const { queueEmail } = require('./email');
+
 async function markReady(orderId, userId) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { inventory: true },
+    include: { 
+      inventory: { include: { restaurant: true } },
+      user: true,
+      pickup: { include: { driver: { include: { user: true } } } },
+    },
   });
 
   if (!order) {
@@ -233,10 +239,29 @@ async function markReady(orderId, userId) {
     throw new Error('Order not confirmed');
   }
 
-  return prisma.order.update({
+  const updated = await prisma.order.update({
     where: { id: orderId },
     data: { status: 'READY_FOR_PICKUP' },
   });
+
+  await queueEmail({
+    to: order.user.email,
+    template: 'ORDER_READY',
+    subject: 'Your RescueBite order is ready!',
+    data: {
+      orderId: order.id,
+      itemName: order.inventory.name,
+      quantity: order.quantity,
+      totalPrice: order.totalPrice,
+      restaurantName: order.inventory.restaurant.businessName,
+      restaurantAddress: order.inventory.restaurant.address,
+      isDelivery: order.isDelivery,
+      driverName: order.pickup?.driver?.user?.email || null,
+      driverPhone: order.pickup?.driver?.user?.phone || null,
+    },
+  });
+
+  return updated;
 }
 
 async function markPickedUpByConsumer(orderId, userId) {
@@ -262,7 +287,7 @@ async function cancel(orderId, userId) {
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: orderId },
-      include: { inventory: true },
+      include: { inventory: true, user: true },
     });
 
     if (!order || order.userId !== userId) {
@@ -275,12 +300,25 @@ async function cancel(orderId, userId) {
 
     await tx.inventory.update({
       where: { id: order.inventoryId },
-      data: { reservedQty: { decrement: order.quantity } },  
+      data: { reservedQty: { decrement: order.quantity } },
     });
 
     const updated = await tx.order.update({
       where: { id: orderId },
       data: { status: 'CANCELLED' },
+    });
+
+    await queueEmail({
+      to: order.user.email,
+      template: 'ORDER_CANCELLED',
+      subject: 'Your RescueBite order has been cancelled',
+      data: {
+        orderId: order.id,
+        itemName: order.inventory.name,
+        quantity: order.quantity,
+        reason: 'Cancelled by user',
+        totalPrice: order.totalPrice,
+      },
     });
 
     return updated;
