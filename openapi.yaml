@@ -3,667 +3,22 @@ info:
   title: RescueBite API
   description: |
     Dynamic Food Waste Recovery Platform for Almaty, Kazakhstan.
-    Connects restaurants, consumers, shelters, and drivers to reduce food waste.
+
+    Connects restaurants, consumers, shelters, and drivers to reduce food waste
+    through progressive discounting and donation matching.
   version: 1.0.0
   contact:
     name: RescueBite Team
-
 servers:
   - url: http://localhost:3000/api/v1
     description: Local development server
 
-tags:
-  - name: Auth
-    description: Authentication and authorization
-  - name: Users
-    description: User profile and allergy management
-  - name: Inventory
-    description: Food item listings and management
-  - name: Orders
-    description: Consumer purchase flow
-  - name: Shelters
-    description: Shelter donation claims
-  - name: Drivers
-    description: Driver pickup and delivery
-  - name: System
-    description: Health and system endpoints
-
-paths:
-  /health:
-    get:
-      tags: [System]
-      summary: Health check
-      description: Check API and database connectivity
-      responses:
-        '200':
-          description: System healthy
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: ok }
-                  database: { type: string, example: connected }
-                  env: { type: string, example: development }
-        '500':
-          description: Database disconnected
-
-  /auth/register:
-    post:
-      tags: [Auth]
-      summary: Register new user
-      description: Create account with role-specific profile
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, password, role]
-              properties:
-                email:
-                  type: string
-                  format: email
-                  example: restaurant@beshbarmak.kz
-                password:
-                  type: string
-                  minLength: 8
-                  example: SecurePass123
-                role:
-                  type: string
-                  enum: [CONSUMER, RESTAURANT, SHELTER, DRIVER, ADMIN]
-                  example: RESTAURANT
-                phone:
-                  type: string
-                  example: '+77071234567'
-      responses:
-        '201':
-          description: User created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  data:
-                    type: object
-                    properties:
-                      user:
-                        $ref: '#/components/schemas/User'
-                      accessToken:
-                        type: string
-                        example: eyJhbGciOiJIUzI1NiIs...
-                      refreshToken:
-                        type: string
-                        example: a1b2c3d4e5f6...
-        '409':
-          description: Email already exists
-        '422':
-          description: Validation error
-
-  /auth/login:
-    post:
-      tags: [Auth]
-      summary: User login
-      description: Authenticate and receive JWT tokens
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email, password]
-              properties:
-                email:
-                  type: string
-                  format: email
-                  example: restaurant@beshbarmak.kz
-                password:
-                  type: string
-                  example: SecurePass123
-      responses:
-        '200':
-          description: Login successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  data:
-                    type: object
-                    properties:
-                      user:
-                        $ref: '#/components/schemas/User'
-                      accessToken: { type: string }
-                      refreshToken: { type: string }
-        '401':
-          description: Invalid credentials
-        '429':
-          description: Rate limited
-
-  /auth/refresh:
-    post:
-      tags: [Auth]
-      summary: Refresh access token
-      description: Exchange valid refresh token for new access token
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refreshToken]
-              properties:
-                refreshToken:
-                  type: string
-                  example: a1b2c3d4e5f6...
-      responses:
-        '200':
-          description: New access token issued
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  data:
-                    type: object
-                    properties:
-                      accessToken: { type: string }
-        '401':
-          description: Invalid or expired refresh token
-
-  /auth/logout:
-    post:
-      tags: [Auth]
-      summary: Logout user
-      description: Revoke refresh token
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [refreshToken]
-              properties:
-                refreshToken:
-                  type: string
-                  example: a1b2c3d4e5f6...
-      responses:
-        '200':
-          description: Logout successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  message: { type: string, example: Logged out successfully }
-
-  /users/me:
-    get:
-      tags: [Users]
-      summary: Get my profile
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: User profile retrieved
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  data:
-                    $ref: '#/components/schemas/User'
-        '401':
-          description: Unauthorized
-
-    patch:
-      tags: [Users]
-      summary: Update profile
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                phone:
-                  type: string
-                  example: '+77071234567'
-      responses:
-        '200':
-          description: Profile updated
-        '401':
-          description: Unauthorized
-
-  /users/me/allergies:
-    get:
-      tags: [Users]
-      summary: Get my allergies
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of allergens
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  data:
-                    type: array
-                    items:
-                      type: string
-                      enum: [GLUTEN, DAIRY, EGGS, FISH, SHELLFISH, TREE_NUTS, PEANUTS, WHEAT, SOY, SESAME]
-                    example: [GLUTEN, DAIRY]
-
-    put:
-      tags: [Users]
-      summary: Update allergies
-      description: Replace entire allergy list
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [allergens]
-              properties:
-                allergens:
-                  type: array
-                  items:
-                    type: string
-                    enum: [GLUTEN, DAIRY, EGGS, FISH, SHELLFISH, TREE_NUTS, PEANUTS, WHEAT, SOY, SESAME]
-                  example: [GLUTEN, DAIRY]
-      responses:
-        '200':
-          description: Allergies updated
-        '400':
-          description: Invalid allergen
-
-  /inventory:
-    get:
-      tags: [Inventory]
-      summary: List inventory items
-      description: Paginated list with optional state filter
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: state
-          in: query
-          schema:
-            type: string
-            enum: [FRESH, DISCOUNTED, FREE, EXPIRED]
-          example: DISCOUNTED
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: perPage
-          in: query
-          schema:
-            type: integer
-            default: 20
-      responses:
-        '200':
-          description: List of items
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Inventory'
-                  meta:
-                    type: object
-                    properties:
-                      total: { type: integer }
-                      page: { type: integer }
-                      perPage: { type: integer }
-                      totalPages: { type: integer }
-
-    post:
-      tags: [Inventory]
-      summary: Create inventory item
-      description: Restaurant only. Item must expire at least 2 hours from now.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name, originalPrice, quantity, expiresAt, ingredients]
-              properties:
-                name:
-                  type: string
-                  example: Beshbarmak Plate
-                description:
-                  type: string
-                  example: Traditional Kazakh dish with horse meat
-                originalPrice:
-                  type: number
-                  example: 4500
-                quantity:
-                  type: integer
-                  example: 5
-                expiresAt:
-                  type: string
-                  format: date-time
-                  example: '2025-05-01T18:00:00Z'
-                ingredients:
-                  type: object
-                  example: { "meat": "horse", "noodles": "wheat", "onion": "fresh" }
-                allergens:
-                  type: array
-                  items:
-                    type: string
-                    enum: [GLUTEN, DAIRY, EGGS, FISH, SHELLFISH, TREE_NUTS, PEANUTS, WHEAT, SOY, SESAME]
-                  example: [GLUTEN]
-      responses:
-        '201':
-          description: Item created
-        '403':
-          description: Not a restaurant
-        '422':
-          description: Validation error
-
-  /inventory/{id}:
-    patch:
-      tags: [Inventory]
-      summary: Update inventory item
-      description: Only editable in FRESH state
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                description: { type: string }
-                originalPrice: { type: number }
-                quantity: { type: integer }
-                ingredients: { type: object }
-                allergens:
-                  type: array
-                  items:
-                    type: string
-                    enum: [GLUTEN, DAIRY, EGGS, FISH, SHELLFISH, TREE_NUTS, PEANUTS, WHEAT, SOY, SESAME]
-      responses:
-        '200':
-          description: Item updated
-        '403':
-          description: Not owner or not FRESH state
-        '422':
-          description: Validation error
-
-    delete:
-      tags: [Inventory]
-      summary: Delete inventory item
-      description: Cannot delete if active orders or claims exist
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Deleted
-        '409':
-          description: Has active orders or claims
-
-  /orders:
-    post:
-      tags: [Orders]
-      summary: Create order
-      description: |
-        Consumer purchase with 10-minute reservation.
-        **Allergy check runs automatically** — blocked if conflicts found.
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [inventoryId]
-              properties:
-                inventoryId:
-                  type: string
-                  format: uuid
-                  example: 550e8400-e29b-41d4-a716-446655440000
-      responses:
-        '201':
-          description: Order created with reservation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  data:
-                    $ref: '#/components/schemas/Order'
-                  reservationExpires:
-                    type: string
-                    format: date-time
-        '400':
-          description: Allergy safety block or item unavailable
-        '403':
-          description: Not a consumer
-
-  /orders/{id}/confirm:
-    post:
-      tags: [Orders]
-      summary: Confirm order
-      description: Finalize purchase within reservation window
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Order confirmed
-        '410':
-          description: Reservation expired
-
-  /shelters/available-donations:
-    get:
-      tags: [Shelters]
-      summary: Get available donations
-      description: FREE items within 10km of shelter
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of nearby donations
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id: { type: string }
-                        name: { type: string }
-                        restaurant_name: { type: string }
-                        distance_km: { type: number }
-        '403':
-          description: Not a shelter
-
-  /shelters/claims:
-    post:
-      tags: [Shelters]
-      summary: Claim donation
-      description: Claim FREE item with 30-minute pickup window
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [inventoryId]
-              properties:
-                inventoryId:
-                  type: string
-                  format: uuid
-      responses:
-        '201':
-          description: Claim created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  data:
-                    $ref: '#/components/schemas/Claim'
-                  claimExpiresAt:
-                    type: string
-                    format: date-time
-        '409':
-          description: Already claimed
-
-  /drivers/available-pickups:
-    get:
-      tags: [Drivers]
-      summary: Get available pickups
-      description: Unassigned deliveries ready for claiming
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of pickups
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Pickup'
-        '403':
-          description: Not a driver
-
-  /drivers/pickups/{id}/claim:
-    post:
-      tags: [Drivers]
-      summary: Claim pickup
-      description: First-come-first-served with 15-minute pickup timeout
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Pickup assigned
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status: { type: string, example: success }
-                  data:
-                    $ref: '#/components/schemas/Pickup'
-                  mustPickUpBy:
-                    type: string
-                    format: date-time
-        '409':
-          description: Already claimed
-
-  /drivers/pickups/{id}/mark-picked-up:
-    post:
-      tags: [Drivers]
-      summary: Mark picked up
-      description: Confirm food collected from restaurant
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Status updated to IN_TRANSIT
-        '403':
-          description: Not assigned to you
-
-  /drivers/pickups/{id}/mark-delivered:
-    post:
-      tags: [Drivers]
-      summary: Mark delivered
-      description: Confirm food delivered to shelter
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Status updated to DELIVERED
-        '403':
-          description: Not assigned to you
-
 components:
   securitySchemes:
-    bearerAuth:
+    BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT access token from login/refresh
 
   schemas:
     User:
@@ -680,14 +35,176 @@ components:
           enum: [CONSUMER, RESTAURANT, SHELTER, DRIVER, ADMIN]
         phone:
           type: string
+          nullable: true
         isVerified:
+          type: boolean
+        isSuspended:
           type: boolean
         createdAt:
           type: string
           format: date-time
-        updatedAt:
+      required: [id, email, role]
+
+    UserRegistration:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        role:
+          type: string
+          enum: [CONSUMER, RESTAURANT, SHELTER, DRIVER]
+        phone:
+          type: string
+          nullable: true
+      required: [email, password, role]
+
+    LoginCredentials:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    TokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+      required: [accessToken, refreshToken]
+
+    Restaurant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        businessName:
+          type: string
+        address:
+          type: string
+        lat:
+          type: number
+          format: decimal
+        lon:
+          type: number
+          format: decimal
+        isVerified:
+          type: boolean
+        verificationStatus:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        createdAt:
           type: string
           format: date-time
+      required: [id, userId, businessName]
+
+    RestaurantProfileInput:
+      type: object
+      properties:
+        businessName:
+          type: string
+        address:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+      required: [businessName, address, lat, lon]
+
+    Shelter:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        shelterName:
+          type: string
+        charityRegNo:
+          type: string
+          nullable: true
+        address:
+          type: string
+        lat:
+          type: number
+          format: decimal
+        lon:
+          type: number
+          format: decimal
+        isVerified:
+          type: boolean
+        verificationStatus:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, shelterName]
+
+    ShelterProfileInput:
+      type: object
+      properties:
+        shelterName:
+          type: string
+        charityRegNo:
+          type: string
+        address:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+      required: [shelterName, address, lat, lon]
+
+    Driver:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        licenseNo:
+          type: string
+        vehiclePlate:
+          type: string
+        isActive:
+          type: boolean
+        isVerified:
+          type: boolean
+        verificationStatus:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, licenseNo]
+
+    DriverProfileInput:
+      type: object
+      properties:
+        licenseNo:
+          type: string
+        vehiclePlate:
+          type: string
+      required: [licenseNo, vehiclePlate]
 
     Inventory:
       type: object
@@ -695,10 +212,14 @@ components:
         id:
           type: string
           format: uuid
+        restaurantId:
+          type: string
+          format: uuid
         name:
           type: string
         description:
           type: string
+          nullable: true
         originalPrice:
           type: number
         currentPrice:
@@ -708,18 +229,52 @@ components:
           enum: [FRESH, DISCOUNTED, FREE, EXPIRED]
         quantity:
           type: integer
+          default: 1
         reservedQty:
           type: integer
+          default: 0
+        createdAt:
+          type: string
+          format: date-time
         expiresAt:
           type: string
           format: date-time
         ingredients:
-          type: object
+          type: array
+          items:
+            type: string
         allergens:
           type: array
           items:
             type: string
             enum: [GLUTEN, DAIRY, EGGS, FISH, SHELLFISH, TREE_NUTS, PEANUTS, WHEAT, SOY, SESAME]
+      required: [id, restaurantId, name, originalPrice, currentPrice, state, quantity, expiresAt]
+
+    InventoryInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        originalPrice:
+          type: number
+        quantity:
+          type: integer
+          default: 1
+        expiresAt:
+          type: string
+          format: date-time
+        ingredients:
+          type: array
+          items:
+            type: string
+        allergens:
+          type: array
+          items:
+            type: string
+            enum: [GLUTEN, DAIRY, EGGS, FISH, SHELLFISH, TREE_NUTS, PEANUTS, WHEAT, SOY, SESAME]
+      required: [name, originalPrice, quantity, expiresAt]
 
     Order:
       type: object
@@ -733,17 +288,63 @@ components:
         inventoryId:
           type: string
           format: uuid
+        quantity:
+          type: integer
+          default: 1
         status:
           type: string
-          enum: [PENDING, CONFIRMED, READY_FOR_PICKUP, COMPLETED, CANCELLED]
+          enum: [PENDING, PAID, CONFIRMED, READY_FOR_PICKUP, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED]
         totalPrice:
           type: number
         reservedUntil:
           type: string
           format: date-time
+          nullable: true
+        deliveryAddress:
+          type: string
+          nullable: true
+        deliveryLat:
+          type: number
+          nullable: true
+        deliveryLon:
+          type: number
+          nullable: true
+        deliveryFee:
+          type: number
+          nullable: true
+        isDelivery:
+          type: boolean
+          default: false
         createdAt:
           type: string
           format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, userId, inventoryId, quantity, status, totalPrice]
+
+    OrderInput:
+      type: object
+      properties:
+        inventoryId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 1
+        deliveryAddress:
+          type: string
+        deliveryLat:
+          type: number
+          minimum: -90
+          maximum: 90
+        deliveryLon:
+          type: number
+          minimum: -180
+          maximum: 180
+      required: [inventoryId]
 
     Claim:
       type: object
@@ -763,9 +364,11 @@ components:
         claimedAt:
           type: string
           format: date-time
+          nullable: true
         expiresAt:
           type: string
           format: date-time
+      required: [id, inventoryId, shelterId, status]
 
     Pickup:
       type: object
@@ -776,39 +379,1091 @@ components:
         claimId:
           type: string
           format: uuid
+          nullable: true
+        orderId:
+          type: string
+          format: uuid
+          nullable: true
         driverId:
           type: string
           format: uuid
           nullable: true
+        type:
+          type: string
+          enum: [SHELTER_DELIVERY, CONSUMER_DELIVERY]
         status:
           type: string
           enum: [UNASSIGNED, ASSIGNED, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED]
         assignedAt:
           type: string
           format: date-time
+          nullable: true
         pickedUpAt:
           type: string
           format: date-time
+          nullable: true
         deliveredAt:
           type: string
           format: date-time
-        claim:
+          nullable: true
+      required: [id, type, status]
+
+    VerificationDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        profileType:
+          type: string
+          enum: [RESTAURANT, SHELTER, DRIVER]
+        profileId:
+          type: string
+          format: uuid
+        documentUrl:
+          type: string
+        documentType:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        reviewedBy:
+          type: string
+          format: uuid
+          nullable: true
+        reviewNote:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, profileType, profileId, documentUrl, documentType, status]
+
+    VerificationInput:
+      type: object
+      properties:
+        profileType:
+          type: string
+          enum: [RESTAURANT, SHELTER, DRIVER]
+        profileId:
+          type: string
+          format: uuid
+        documentType:
+          type: string
+        documentUrl:
+          type: string
+          format: uri
+      required: [profileType, profileId, documentType, documentUrl]
+
+    VerificationReviewInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [APPROVED, REJECTED]
+        note:
+          type: string
+      required: [status]
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity:
+          type: string
+        entityId:
+          type: string
+        action:
+          type: string
+        field:
+          type: string
+          nullable: true
+        oldValue:
+          type: string
+          nullable: true
+        newValue:
+          type: string
+        changedBy:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+      required: [id, entity, entityId, action, newValue, changedBy]
+
+    Error:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        code:
+          type: string
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: array
+                items:
+                  type: string
+              message:
+                type: string
+
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        data:
           type: object
-          properties:
-            inventory:
+        message:
+          type: string
+
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register new user
+      description: Create account with role CONSUMER, RESTAURANT, SHELTER, or DRIVER
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login
+      description: Authenticate and receive access/refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCredentials'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
               type: object
               properties:
-                restaurant:
-                  type: object
-                  properties:
-                    businessName: { type: string }
-                    address: { type: string }
-                    lat: { type: number }
-                    lon: { type: number }
-            shelter:
+                refreshToken:
+                  type: string
+              required: [refreshToken]
+      responses:
+        '200':
+          description: New tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
               type: object
               properties:
-                shelterName: { type: string }
-                address: { type: string }
-                lat: { type: number }
-                lon: { type: number }
+                refreshToken:
+                  type: string
+              required: [refreshToken]
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /profile/restaurant:
+    post:
+      tags: [Profile Management]
+      summary: Create restaurant profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestaurantProfileInput'
+      responses:
+        '201':
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Restaurant'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /profile/shelter:
+    post:
+      tags: [Profile Management]
+      summary: Create shelter profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShelterProfileInput'
+      responses:
+        '201':
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Shelter'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /profile/driver:
+    post:
+      tags: [Profile Management]
+      summary: Create driver profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverProfileInput'
+      responses:
+        '201':
+          description: Profile created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Driver'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /verification/submit:
+    post:
+      tags: [Verification]
+      summary: Submit verification document
+      description: Upload document for admin review (required for profile activation)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificationInput'
+      responses:
+        '201':
+          description: Document submitted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/VerificationDocument'
+        '403':
+          description: Not authorized to submit for this profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /inventory:
+    get:
+      tags: [Inventory]
+      summary: List inventory items
+      description: List all items with optional state filter and pagination
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [FRESH, DISCOUNTED, FREE, EXPIRED]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of inventory items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Inventory'
+
+    post:
+      tags: [Inventory]
+      summary: Create inventory item
+      description: Restaurant lists surplus food (FRESH state only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryInput'
+      responses:
+        '201':
+          description: Item created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Inventory'
+        '403':
+          description: Restaurant role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /inventory/{id}:
+    patch:
+      tags: [Inventory]
+      summary: Update inventory item
+      description: Can only edit items in FRESH state
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                originalPrice:
+                  type: number
+                quantity:
+                  type: integer
+                expiresAt:
+                  type: string
+                  format: date-time
+                ingredients:
+                  type: array
+                  items:
+                    type: string
+                allergens:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '422':
+          description: Can only edit FRESH items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Inventory]
+      summary: Delete inventory item
+      description: Cannot delete if active orders or claims exist
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Item deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '409':
+          description: Active orders or claims exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Create order
+      description: |
+        Consumer purchases item. Allergy check enforced.
+        Supports quantity (1-10 units).
+        10-minute reservation hold.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderInput'
+      responses:
+        '201':
+          description: Order created with reservation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Order'
+                      reservationExpires:
+                        type: string
+                        format: date-time
+        '400':
+          description: Allergy safety block
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Item not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders/{id}/pay:
+    post:
+      tags: [Orders]
+      summary: Pay for order
+      description: Mock payment - no actual charge processed
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '410':
+          description: Reservation expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders/{id}/cancel:
+    post:
+      tags: [Orders]
+      summary: Cancel order
+      description: Can only cancel PENDING orders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '422':
+          description: Can only cancel pending orders
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders/{id}/picked-up:
+    post:
+      tags: [Orders]
+      summary: Mark order picked up by consumer
+      description: For pickup orders (not delivery)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /orders/my-orders:
+    get:
+      tags: [Orders]
+      summary: List consumer orders
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Order'
+
+  /orders/my-restaurant-orders:
+    get:
+      tags: [Orders]
+      summary: List restaurant orders
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of orders for restaurant
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Order'
+
+  /orders/{id}/confirm:
+    post:
+      tags: [Orders]
+      summary: Confirm order (Restaurant)
+      description: Restaurant confirms paid order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Not authorized - not your restaurant's order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders/{id}/ready:
+    post:
+      tags: [Orders]
+      summary: Mark order ready for pickup
+      description: |
+        Restaurant marks order as ready. Triggers email notification to consumer.
+        For delivery orders, creates pickup task.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order ready, email queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /shelters/available-donations:
+    get:
+      tags: [Shelters]
+      summary: List available donations
+      description: FREE items within 10km of verified shelter
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of free items with distances
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Inventory'
+                            - properties:
+                                distance_km:
+                                  type: number
+
+  /shelters/claims:
+    post:
+      tags: [Shelters]
+      summary: Claim free food
+      description: |
+        First-come-first-served with 30-minute claim window.
+        Only verified shelters can claim.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                inventoryId:
+                  type: string
+                  format: uuid
+              required: [inventoryId]
+      responses:
+        '201':
+          description: Claim successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Claim'
+        '409':
+          description: Item already claimed or not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /shelters/claims/{id}/confirm-receipt:
+    post:
+      tags: [Shelters]
+      summary: Confirm receipt of donation
+      description: Shelter confirms food was delivered
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Receipt confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /drivers/available-pickups:
+    get:
+      tags: [Drivers]
+      summary: List available pickups
+      description: Unassigned delivery tasks
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of pickups
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Pickup'
+
+  /drivers/pickups/{id}/claim:
+    post:
+      tags: [Drivers]
+      summary: Claim pickup task
+      description: First-come-first-served with 15-minute timeout
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pickup claimed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Pickup'
+        '409':
+          description: Pickup already claimed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /drivers/pickups/{id}/mark-picked-up:
+    post:
+      tags: [Drivers]
+      summary: Mark food picked up
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /drivers/pickups/{id}/mark-delivered:
+    post:
+      tags: [Drivers]
+      summary: Mark food delivered
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+        '403':
+          description: Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/{id}/suspend:
+    post:
+      tags: [Admin]
+      summary: Suspend user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /admin/users/{id}/unsuspend:
+    post:
+      tags: [Admin]
+      summary: Unsuspend user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User unsuspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /admin/verification/pending:
+    get:
+      tags: [Admin]
+      summary: List pending verifications
+      description: Documents awaiting admin review
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of pending documents
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/VerificationDocument'
+
+  /admin/verification/{id}/review:
+    post:
+      tags: [Admin]
+      summary: Review verification document
+      description: Approve or reject profile verification
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificationReviewInput'
+      responses:
+        '200':
+          description: Review completed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/VerificationDocument'
+
+  /admin/inventory/{id}/override-state:
+    post:
+      tags: [Admin]
+      summary: Override inventory state
+      description: Force state change (e.g., for testing or emergency)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                state:
+                  type: string
+                  enum: [FRESH, DISCOUNTED, FREE, EXPIRED]
+              required: [state]
+      responses:
+        '200':
+          description: State overridden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /admin/process-emails:
+    post:
+      tags: [Admin]
+      summary: Manually process email queue
+      description: Trigger email worker immediately (normally runs every 30s)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Emails processed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - properties:
+                      processed:
+                        type: integer

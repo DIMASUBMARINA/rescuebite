@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: rescuebite-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: rescuebite
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rescuebite-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:123@db:5432/rescuebite
+      JWT_SECRET: dev-secret-32-characters-long-12345
+      PORT: 3000
+      NODE_ENV: development
+      ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
+      AGENTMAIL_API_KEY: ${AGENTMAIL_API_KEY}
+      AGENTMAIL_INBOX_ID: ${AGENTMAIL_INBOX_ID}
+      AGENTMAIL_BASE_URL: https://api.agentmail.to/v0
+      APP_BASE_URL: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - ./prisma:/app/prisma
+    command: >
+      sh -c "npx prisma migrate deploy &&
+             npx prisma generate &&
+             npm run dev"
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rescuebite-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3000/api/v1
+    depends_on:
+      - api
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    command: npm run dev -- --host
+
+volumes:
+  postgres_data:
